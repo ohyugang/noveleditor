@@ -323,7 +323,7 @@
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        나눔명조로 글을 쓰고, A5 PNG 이미지로 저장할 수 있는 소설 내지 편집기입니다.
+        나눔명조로 글을 쓰고, 페이지 번호가 들어간 A5 PNG 이미지로 저장할 수 있습니다.
       </p>
     </header>
 
@@ -422,7 +422,7 @@
 
     <footer>
       <p>
-        긴 글은 여러 장의 PNG 파일로 나뉘어 저장됩니다. 나눔명조 웹폰트를 불러오기 위해 인터넷 연결이 필요합니다.
+        긴 글은 여러 장의 PNG 파일로 나뉘어 저장됩니다. 홀수 페이지는 오른쪽 아래, 짝수 페이지는 왼쪽 아래에 페이지 번호가 들어갑니다.
       </p>
     </footer>
   </div>
@@ -587,7 +587,7 @@
       if (type === "narrow") {
         return {
           top: 130,
-          bottom: 120,
+          bottom: 150,
           left: 130,
           right: 130
         };
@@ -596,7 +596,7 @@
       if (type === "wide") {
         return {
           top: 210,
-          bottom: 190,
+          bottom: 220,
           left: 190,
           right: 190
         };
@@ -604,7 +604,7 @@
 
       return {
         top: 170,
-        bottom: 155,
+        bottom: 185,
         left: 160,
         right: 160
       };
@@ -651,6 +651,25 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
+    function drawPageNumber(ctx, pageNumber, canvas, margin) {
+      const pageText = String(pageNumber);
+      const pageFontSize = 34;
+      const bottomY = canvas.height - 90;
+
+      ctx.font = `${pageFontSize}px "Nanum Myeongjo", serif`;
+      ctx.fillStyle = "#333333";
+      ctx.textBaseline = "top";
+
+      if (pageNumber % 2 === 1) {
+        const textWidth = ctx.measureText(pageText).width;
+        const x = canvas.width - margin.right - textWidth;
+        ctx.fillText(pageText, x, bottomY);
+      } else {
+        const x = margin.left;
+        ctx.fillText(pageText, x, bottomY);
+      }
+    }
+
     function downloadCanvasAsPng(canvas, fileName) {
       const link = document.createElement("a");
       link.download = fileName;
@@ -673,6 +692,7 @@
       if (document.fonts) {
         await document.fonts.load('400 48px "Nanum Myeongjo"');
         await document.fonts.load('700 56px "Nanum Myeongjo"');
+        await document.fonts.load('400 34px "Nanum Myeongjo"');
         await document.fonts.ready;
       }
     }
@@ -741,6 +761,8 @@
 
         for (const line of bodyLines) {
           if (y + bodyLineHeight > pageHeight - margin.bottom) {
+            drawPageNumber(ctx, pageIndex, canvas, margin);
+
             downloadCanvasAsPng(
               canvas,
               `${safeTitle}_A5_${String(pageIndex).padStart(2, "0")}.png`
@@ -766,6 +788,8 @@
 
           y += bodyLineHeight;
         }
+
+        drawPageNumber(ctx, pageIndex, canvas, margin);
 
         downloadCanvasAsPng(
           canvas,
