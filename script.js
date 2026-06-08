@@ -155,7 +155,101 @@ function loadNovel() {
 /*
   PDF 저장
 */
+/*
+  PDF 파일을 바로 다운로드하는 함수입니다.
+  인쇄 창을 열지 않고, html2pdf.js를 이용해 PDF를 생성합니다.
+*/
 function saveAsPdf() {
+  const title = titleInput.value.trim() || "제목 없는 소설";
+  const content = contentInput.value || "";
+
+  const fontSize = fontSizeInput.value;
+  const lineHeight = lineHeightInput.value;
+
+  // PDF로 만들 영역에 현재 제목과 본문을 넣습니다.
+  printTitle.textContent = title;
+  printContent.textContent = content;
+
+  // PDF 본문에도 선택한 글꼴 크기와 줄간격을 적용합니다.
+  printContent.style.fontSize = `${fontSize}px`;
+  printContent.style.lineHeight = lineHeight;
+
+  // PDF 출력 영역을 잠깐 화면 밖에서 보이게 만듭니다.
+  // display: none 상태면 PDF 라이브러리가 내용을 제대로 못 읽는 경우가 있습니다.
+  const printArea = document.getElementById("printArea");
+
+  printArea.style.display = "block";
+  printArea.style.position = "fixed";
+  printArea.style.left = "-9999px";
+  printArea.style.top = "0";
+  printArea.style.width = "794px";
+  printArea.style.padding = "60px";
+  printArea.style.background = "#ffffff";
+  printArea.style.color = "#000000";
+
+  // 저장을 한 번 더 해둡니다.
+  saveNovel();
+
+  // 파일 이름에 사용할 수 없는 문자를 안전하게 바꿉니다.
+  const safeFileName = title.replace(/[\\/:*?"<>|]/g, "_");
+
+  // html2pdf 설정입니다.
+  const options = {
+    margin: 10,
+    filename: `${safeFileName}.pdf`,
+    image: {
+      type: "jpeg",
+      quality: 0.98
+    },
+    html2canvas: {
+      scale: 2,
+      useCORS: true
+    },
+    jsPDF: {
+      unit: "mm",
+      format: "a4",
+      orientation: "portrait"
+    },
+    pagebreak: {
+      mode: ["css", "legacy"]
+    }
+  };
+
+  // PDF 생성 후 바로 다운로드합니다.
+  html2pdf()
+    .set(options)
+    .from(printArea)
+    .save()
+    .then(() => {
+      // PDF 저장이 끝나면 다시 숨깁니다.
+      printArea.style.display = "none";
+      printArea.style.position = "";
+      printArea.style.left = "";
+      printArea.style.top = "";
+      printArea.style.width = "";
+      printArea.style.padding = "";
+      printArea.style.background = "";
+      printArea.style.color = "";
+
+      saveStatus.textContent = "PDF 파일을 다운로드했습니다.";
+    })
+    .catch((error) => {
+      console.error("PDF 생성 중 오류:", error);
+
+      // 오류가 나도 다시 숨깁니다.
+      printArea.style.display = "none";
+      printArea.style.position = "";
+      printArea.style.left = "";
+      printArea.style.top = "";
+      printArea.style.width = "";
+      printArea.style.padding = "";
+      printArea.style.background = "";
+      printArea.style.color = "";
+
+      saveStatus.textContent = "PDF 생성 중 오류가 발생했습니다.";
+      alert("PDF 생성 중 오류가 발생했어요. 콘솔을 확인해주세요.");
+    });
+}
   const title = titleInput.value.trim() || "제목 없는 소설";
   const content = contentInput.value || "";
 
