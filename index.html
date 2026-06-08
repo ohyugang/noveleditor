@@ -239,12 +239,6 @@
       color: #1f2937;
     }
 
-    footer {
-      margin-top: 20px;
-      color: #8f93a3;
-      font-size: 14px;
-    }
-
     .pdf-notice {
       display: none;
       position: fixed;
@@ -263,40 +257,10 @@
       display: block;
     }
 
-    /*
-      PDF로 캡처할 진짜 원고 영역.
-      평소에는 화면에 안 보이고, PDF 만들 때만 JS가 body에 붙였다가 제거합니다.
-    */
-    .pdf-paper {
-      width: 794px;
-      min-height: 1123px;
-      padding: 72px 64px;
-      background: #ffffff;
-      color: #000000;
-      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-    }
-
-    .pdf-paper h1 {
-      margin: 0 0 36px;
-      text-align: center;
-      font-size: 24px;
-      line-height: 1.4;
-      color: #000000;
-    }
-
-    .pdf-paper .pdf-content {
-      white-space: pre-wrap;
-      word-break: keep-all;
-      color: #000000;
-    }
-
-    .pdf-capture-layer {
-      position: absolute;
-      left: 0;
-      top: 0;
-      z-index: 999999;
-      background: #ffffff;
-      color: #000000;
+    footer {
+      margin-top: 20px;
+      color: #8f93a3;
+      font-size: 14px;
     }
 
     @media (max-width: 1000px) {
@@ -349,7 +313,7 @@
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        글을 쓰면 오른쪽 미리보기에 바로 반영되고, PDF는 여러 페이지로 저장됩니다.
+        글을 쓰면 오른쪽 미리보기에 바로 반영되고, PDF는 텍스트로 직접 저장됩니다.
       </p>
     </header>
 
@@ -359,15 +323,15 @@
           <div class="control-group">
             <label for="fontSizeInput">글꼴 크기</label>
             <select id="fontSizeInput">
-              <option value="14">14px</option>
-              <option value="15">15px</option>
-              <option value="16">16px</option>
-              <option value="17" selected>17px</option>
-              <option value="18">18px</option>
-              <option value="19">19px</option>
-              <option value="20">20px</option>
-              <option value="22">22px</option>
-              <option value="24">24px</option>
+              <option value="10">10pt</option>
+              <option value="11">11pt</option>
+              <option value="12" selected>12pt</option>
+              <option value="13">13pt</option>
+              <option value="14">14pt</option>
+              <option value="15">15pt</option>
+              <option value="16">16pt</option>
+              <option value="18">18pt</option>
+              <option value="20">20pt</option>
             </select>
           </div>
 
@@ -441,16 +405,13 @@
 
     <footer>
       <p>
-        PDF 저장 버튼을 누르면 원고가 이미지로 캡처되어 PDF로 저장됩니다.
+        PDF 저장에는 외부 한글 폰트를 불러옵니다. 인터넷 연결이 필요합니다.
       </p>
     </footer>
   </div>
 
-  <!-- 화면 캡처용 라이브러리 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-  <!-- PDF 생성용 라이브러리 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 
   <script>
     const titleInput = document.getElementById("titleInput");
@@ -476,6 +437,8 @@
     const FONT_SIZE_KEY = "novelFontSize";
     const LINE_HEIGHT_KEY = "novelLineHeight";
 
+    const FONT_URL = "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf";
+
     function updateCharCount() {
       const content = contentInput.value;
       charCount.textContent = content.length;
@@ -483,13 +446,13 @@
     }
 
     function applyStyle() {
-      const fontSize = fontSizeInput.value + "px";
+      const fontSizePx = Number(fontSizeInput.value) * 1.35;
       const lineHeight = lineHeightInput.value;
 
-      contentInput.style.fontSize = fontSize;
+      contentInput.style.fontSize = fontSizePx + "px";
       contentInput.style.lineHeight = lineHeight;
 
-      previewContent.style.fontSize = fontSize;
+      previewContent.style.fontSize = fontSizePx + "px";
       previewContent.style.lineHeight = lineHeight;
     }
 
@@ -551,56 +514,58 @@
       return name.replace(/[\\/:*?"<>|]/g, "_");
     }
 
-    function waitFrame() {
-      return new Promise(function (resolve) {
-        requestAnimationFrame(function () {
-          requestAnimationFrame(resolve);
-        });
+    function splitTextByWidth(text, font, fontSize, maxWidth) {
+      const lines = [];
+      const paragraphs = text.replace(/\r/g, "").split("\n");
+
+      paragraphs.forEach(function (paragraph) {
+        if (paragraph.trim() === "") {
+          lines.push("");
+          return;
+        }
+
+        let currentLine = "";
+
+        for (const char of paragraph) {
+          const testLine = currentLine + char;
+          const width = font.widthOfTextAtSize(testLine, fontSize);
+
+          if (width > maxWidth && currentLine !== "") {
+            lines.push(currentLine);
+            currentLine = char;
+          } else {
+            currentLine = testLine;
+          }
+        }
+
+        if (currentLine !== "") {
+          lines.push(currentLine);
+        }
       });
+
+      return lines;
     }
 
-    function createPdfPaper() {
-      const title = titleInput.value.trim() || "제목 없는 소설";
-      const content = contentInput.value || "";
+    async function loadKoreanFont() {
+      const response = await fetch(FONT_URL);
 
-      const layer = document.createElement("div");
-      layer.className = "pdf-capture-layer";
+      if (!response.ok) {
+        throw new Error("폰트 파일을 불러오지 못했습니다.");
+      }
 
-      const paper = document.createElement("section");
-      paper.className = "pdf-paper";
-
-      const titleEl = document.createElement("h1");
-      titleEl.textContent = title;
-
-      const contentEl = document.createElement("div");
-      contentEl.className = "pdf-content";
-      contentEl.textContent = content;
-
-      contentEl.style.fontSize = fontSizeInput.value + "px";
-      contentEl.style.lineHeight = lineHeightInput.value;
-
-      paper.appendChild(titleEl);
-      paper.appendChild(contentEl);
-      layer.appendChild(paper);
-
-      document.body.appendChild(layer);
-
-      return {
-        layer: layer,
-        paper: paper
-      };
+      return await response.arrayBuffer();
     }
 
     async function savePdf() {
       updateEverything();
 
-      if (typeof html2canvas === "undefined") {
-        alert("화면 캡처 기능을 불러오지 못했어요. 인터넷 연결을 확인해주세요.");
+      if (!window.PDFLib) {
+        alert("PDF 기능을 불러오지 못했어요. 인터넷 연결을 확인해주세요.");
         return;
       }
 
-      if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("PDF 기능을 불러오지 못했어요. 인터넷 연결을 확인해주세요.");
+      if (typeof fontkit === "undefined") {
+        alert("한글 폰트 기능을 불러오지 못했어요. 인터넷 연결을 확인해주세요.");
         return;
       }
 
@@ -608,67 +573,94 @@
       pdfNotice.classList.add("active");
       saveStatus.textContent = "PDF 만드는 중...";
 
-      const created = createPdfPaper();
-
       try {
-        await waitFrame();
+        const { PDFDocument, rgb } = PDFLib;
 
-        const canvas = await html2canvas(created.paper, {
-          scale: 2,
-          backgroundColor: "#ffffff",
-          useCORS: true,
-          logging: false
-        });
+        const pdfDoc = await PDFDocument.create();
+        pdfDoc.registerFontkit(fontkit);
 
-        const jsPDF = window.jspdf.jsPDF;
+        const fontBytes = await loadKoreanFont();
+        const koreanFont = await pdfDoc.embedFont(fontBytes);
 
-        const pageWidth = 794;
-        const pageHeight = 1123;
+        const pageWidth = 595.28;
+        const pageHeight = 841.89;
 
-        const pdf = new jsPDF({
-          orientation: "portrait",
-          unit: "px",
-          format: [pageWidth, pageHeight]
-        });
+        const marginTop = 70;
+        const marginBottom = 65;
+        const marginLeft = 65;
+        const marginRight = 65;
 
-        const imgData = canvas.toDataURL("image/png");
-
-        const imgWidth = pageWidth;
-        const imgHeight = canvas.height * imgWidth / canvas.width;
-
-        let position = 0;
-        let pageNumber = 0;
-
-        while (position < imgHeight) {
-          if (pageNumber > 0) {
-            pdf.addPage([pageWidth, pageHeight], "portrait");
-          }
-
-          pdf.addImage(
-            imgData,
-            "PNG",
-            0,
-            -position,
-            imgWidth,
-            imgHeight
-          );
-
-          position += pageHeight;
-          pageNumber += 1;
-        }
+        const usableWidth = pageWidth - marginLeft - marginRight;
+        const usableHeight = pageHeight - marginTop - marginBottom;
 
         const title = titleInput.value.trim() || "제목 없는 소설";
-        const fileName = makeSafeFileName(title) + ".pdf";
+        const content = contentInput.value || "";
 
-        pdf.save(fileName);
+        const bodyFontSize = Number(fontSizeInput.value);
+        const bodyLineHeight = bodyFontSize * Number(lineHeightInput.value);
+
+        const titleFontSize = 20;
+        const titleLineHeight = 30;
+
+        let page = pdfDoc.addPage([pageWidth, pageHeight]);
+        let y = pageHeight - marginTop;
+
+        const titleWidth = koreanFont.widthOfTextAtSize(title, titleFontSize);
+        page.drawText(title, {
+          x: (pageWidth - titleWidth) / 2,
+          y: y,
+          size: titleFontSize,
+          font: koreanFont,
+          color: rgb(0, 0, 0)
+        });
+
+        y -= titleLineHeight + 22;
+
+        const lines = splitTextByWidth(content, koreanFont, bodyFontSize, usableWidth);
+
+        for (const line of lines) {
+          if (y < marginBottom) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - marginTop;
+          }
+
+          if (line.trim() !== "") {
+            page.drawText(line, {
+              x: marginLeft,
+              y: y,
+              size: bodyFontSize,
+              font: koreanFont,
+              color: rgb(0, 0, 0)
+            });
+          }
+
+          y -= bodyLineHeight;
+        }
+
+        const pdfBytes = await pdfDoc.save();
+
+        const blob = new Blob([pdfBytes], {
+          type: "application/pdf"
+        });
+
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = makeSafeFileName(title) + ".pdf";
+
+        document.body.appendChild(link);
+        link.click();
+
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
 
         saveStatus.textContent = "PDF 저장 완료";
       } catch (error) {
         console.error(error);
         saveStatus.textContent = "PDF 저장 실패";
-        alert("PDF 저장에 실패했어요.");
+        alert("PDF 저장에 실패했어요. 콘솔을 확인해주세요.");
       } finally {
-        created.layer.remove();
         pdfNotice.classList.remove("active");
         pdfButton.disabled = false;
       }
@@ -683,7 +675,7 @@
 
       titleInput.value = "";
       contentInput.value = "";
-      fontSizeInput.value = "17";
+      fontSizeInput.value = "12";
       lineHeightInput.value = "1.8";
 
       localStorage.removeItem(TITLE_KEY);
