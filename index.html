@@ -536,20 +536,22 @@
       return name.replace(/[\\/:*?"<>|]/g, "_");
     }
 
-    /*
-      글자가 오른쪽에서 잘리지 않게 줄을 나누는 함수입니다.
-      기존보다 더 보수적으로 계산해서, 실제 PDF에 들어갈 때 여유 공간을 남깁니다.
-    */
-    function splitTextByWidth(text, font, fontSize, maxWidth) {
+    function getMaxCharsPerLine(fontSize) {
+      const size = Number(fontSize);
+
+      if (size <= 9) return 21;
+      if (size <= 10) return 20;
+      if (size <= 11) return 18;
+      if (size <= 12) return 17;
+      if (size <= 13) return 16;
+      if (size <= 14) return 15;
+
+      return 14;
+    }
+
+    function splitTextByCharacterCount(text, maxCharsPerLine) {
       const lines = [];
       const paragraphs = text.replace(/\r/g, "").split("\n");
-
-      /*
-        안전 계수입니다.
-        1.0에 가까울수록 한 줄이 길어지고,
-        0.88처럼 낮을수록 오른쪽에 여백이 더 남습니다.
-      */
-      const safeWidth = maxWidth * 0.88;
 
       paragraphs.forEach(function (paragraph) {
         if (paragraph.trim() === "") {
@@ -560,14 +562,11 @@
         let currentLine = "";
 
         for (const char of paragraph) {
-          const testLine = currentLine + char;
-          const width = font.widthOfTextAtSize(testLine, fontSize);
+          currentLine += char;
 
-          if (width > safeWidth && currentLine !== "") {
+          if (currentLine.length >= maxCharsPerLine) {
             lines.push(currentLine);
-            currentLine = char;
-          } else {
-            currentLine = testLine;
+            currentLine = "";
           }
         }
 
@@ -615,24 +614,12 @@
         const fontBytes = await loadKoreanFont();
         const koreanFont = await pdfDoc.embedFont(fontBytes);
 
-        /*
-          A5 판형 크기입니다.
-          단위는 PDF point입니다.
-          A5 = 148mm x 210mm
-          약 419.53pt x 595.28pt
-        */
         const pageWidth = 419.53;
         const pageHeight = 595.28;
 
-        /*
-          글자 잘림 방지를 위해 여백을 조금 넉넉하게 잡았습니다.
-        */
         const marginTop = 46;
         const marginBottom = 44;
-        const marginLeft = 48;
-        const marginRight = 48;
-
-        const usableWidth = pageWidth - marginLeft - marginRight;
+        const marginLeft = 50;
 
         const title = titleInput.value.trim() || "제목 없는 소설";
         const content = contentInput.value || "";
@@ -643,13 +630,13 @@
         const titleFontSize = 15;
         const titleLineHeight = 22;
 
+        const maxCharsPerLine = getMaxCharsPerLine(bodyFontSize);
+        const maxTitleCharsPerLine = 13;
+
         let page = pdfDoc.addPage([pageWidth, pageHeight]);
         let y = pageHeight - marginTop;
 
-        /*
-          제목도 길면 자동 줄바꿈합니다.
-        */
-        const titleLines = splitTextByWidth(title, koreanFont, titleFontSize, usableWidth);
+        const titleLines = splitTextByCharacterCount(title, maxTitleCharsPerLine);
 
         for (const titleLine of titleLines) {
           if (y < marginBottom) {
@@ -658,6 +645,7 @@
           }
 
           const titleWidth = koreanFont.widthOfTextAtSize(titleLine, titleFontSize);
+
           page.drawText(titleLine, {
             x: Math.max(marginLeft, (pageWidth - titleWidth) / 2),
             y: y,
@@ -671,7 +659,7 @@
 
         y -= 14;
 
-        const lines = splitTextByWidth(content, koreanFont, bodyFontSize, usableWidth);
+        const lines = splitTextByCharacterCount(content, maxCharsPerLine);
 
         for (const line of lines) {
           if (y < marginBottom) {
