@@ -111,7 +111,7 @@
       border-radius: 14px;
       background: #11131a;
       color: #ffffff;
-      font-size: 17px;
+      font-size: 16px;
       line-height: 1.8;
       resize: vertical;
       outline: none;
@@ -323,15 +323,13 @@
           <div class="control-group">
             <label for="fontSizeInput">글꼴 크기</label>
             <select id="fontSizeInput">
+              <option value="9">9pt</option>
               <option value="10">10pt</option>
               <option value="11">11pt</option>
               <option value="12" selected>12pt</option>
               <option value="13">13pt</option>
               <option value="14">14pt</option>
               <option value="15">15pt</option>
-              <option value="16">16pt</option>
-              <option value="18">18pt</option>
-              <option value="20">20pt</option>
             </select>
           </div>
 
@@ -437,6 +435,8 @@
     const FONT_SIZE_KEY = "novelFontSize";
     const LINE_HEIGHT_KEY = "novelLineHeight";
 
+    const ALLOWED_FONT_SIZES = ["9", "10", "11", "12", "13", "14", "15"];
+
     const FONT_URL = "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf";
 
     function updateCharCount() {
@@ -445,8 +445,22 @@
       charCountNoSpace.textContent = content.replace(/\s/g, "").length;
     }
 
+    function normalizeFontSize(value) {
+      if (ALLOWED_FONT_SIZES.includes(value)) {
+        return value;
+      }
+
+      return "12";
+    }
+
     function applyStyle() {
-      const fontSizePx = Number(fontSizeInput.value) * 1.35;
+      const normalizedFontSize = normalizeFontSize(fontSizeInput.value);
+
+      if (fontSizeInput.value !== normalizedFontSize) {
+        fontSizeInput.value = normalizedFontSize;
+      }
+
+      const fontSizePx = Number(normalizedFontSize) * 1.35;
       const lineHeight = lineHeightInput.value;
 
       contentInput.style.fontSize = fontSizePx + "px";
@@ -467,9 +481,11 @@
     }
 
     function saveNow() {
+      const normalizedFontSize = normalizeFontSize(fontSizeInput.value);
+
       localStorage.setItem(TITLE_KEY, titleInput.value);
       localStorage.setItem(CONTENT_KEY, contentInput.value);
-      localStorage.setItem(FONT_SIZE_KEY, fontSizeInput.value);
+      localStorage.setItem(FONT_SIZE_KEY, normalizedFontSize);
       localStorage.setItem(LINE_HEIGHT_KEY, lineHeightInput.value);
 
       saveStatus.textContent = "저장됨";
@@ -496,7 +512,11 @@
       }
 
       if (savedFontSize !== null) {
-        fontSizeInput.value = savedFontSize;
+        const normalizedFontSize = normalizeFontSize(savedFontSize);
+        fontSizeInput.value = normalizedFontSize;
+        localStorage.setItem(FONT_SIZE_KEY, normalizedFontSize);
+      } else {
+        fontSizeInput.value = "12";
       }
 
       if (savedLineHeight !== null) {
@@ -591,12 +611,11 @@
         const marginRight = 65;
 
         const usableWidth = pageWidth - marginLeft - marginRight;
-        const usableHeight = pageHeight - marginTop - marginBottom;
 
         const title = titleInput.value.trim() || "제목 없는 소설";
         const content = contentInput.value || "";
 
-        const bodyFontSize = Number(fontSizeInput.value);
+        const bodyFontSize = Number(normalizeFontSize(fontSizeInput.value));
         const bodyLineHeight = bodyFontSize * Number(lineHeightInput.value);
 
         const titleFontSize = 20;
