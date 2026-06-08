@@ -8,7 +8,7 @@
 
   <title>웹 소설 편집기</title>
 
-  <!-- style.css 파일을 연결합니다 -->
+  <!-- style.css 파일 연결 -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -18,12 +18,44 @@
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        브라우저에 자동 저장되는 초간단 원고 작업실입니다.
+        글꼴 크기와 줄간격을 조절하고, PDF로 저장할 수 있는 원고 작업실입니다.
       </p>
     </header>
 
-    <!-- 제목 입력 영역 -->
+    <!-- 편집기 전체 카드 -->
     <section class="editor-card">
+      <!-- 설정 영역 -->
+      <div class="control-panel">
+        <div class="control-group">
+          <label for="fontSizeInput">글꼴 크기</label>
+          <select id="fontSizeInput">
+            <option value="14">14px</option>
+            <option value="15">15px</option>
+            <option value="16">16px</option>
+            <option value="17" selected>17px</option>
+            <option value="18">18px</option>
+            <option value="19">19px</option>
+            <option value="20">20px</option>
+            <option value="22">22px</option>
+            <option value="24">24px</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="lineHeightInput">줄간격</label>
+          <select id="lineHeightInput">
+            <option value="1.4">1.4</option>
+            <option value="1.5">1.5</option>
+            <option value="1.6">1.6</option>
+            <option value="1.7">1.7</option>
+            <option value="1.8" selected>1.8</option>
+            <option value="1.9">1.9</option>
+            <option value="2">2.0</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 제목 입력 영역 -->
       <label for="titleInput">소설 제목</label>
       <input 
         type="text" 
@@ -56,20 +88,27 @@
       <!-- 버튼 영역 -->
       <div class="button-row">
         <button id="loadButton">저장된 글 불러오기</button>
-        <button id="downloadButton">TXT 다운로드</button>
+        <button id="pdfButton">PDF로 저장</button>
         <button id="clearButton" class="danger">전체 삭제</button>
       </div>
+    </section>
+
+    <!-- PDF 출력용 미리보기 영역 -->
+    <!-- 화면에서는 숨겨져 있고, PDF 저장할 때만 인쇄됩니다 -->
+    <section id="printArea" class="print-area">
+      <h1 id="printTitle"></h1>
+      <div id="printContent"></div>
     </section>
 
     <!-- 하단 안내 -->
     <footer>
       <p>
-        저장은 현재 사용하는 브라우저에만 남습니다. 다른 컴퓨터나 브라우저에서는 보이지 않아요.
+        저장은 현재 사용하는 브라우저에만 남습니다. PDF 저장은 브라우저의 인쇄 창에서 “PDF로 저장”을 선택하면 됩니다.
       </p>
     </footer>
   </div>
 
-  <!-- script.js 파일을 연결합니다 -->
+  <!-- script.js 파일 연결 -->
   <script src="script.js"></script>
 </body>
 </html>
