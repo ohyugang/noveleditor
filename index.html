@@ -188,6 +188,10 @@
     .preview-card {
       position: sticky;
       top: 24px;
+      max-height: calc(100vh - 48px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .preview-header {
@@ -195,6 +199,7 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 18px;
+      flex-shrink: 0;
     }
 
     .preview-label {
@@ -219,34 +224,42 @@
       background: #141722;
     }
 
-    .paper-preview {
-      width: min(100%, 420px);
-      min-height: 595px;
-      max-height: 720px;
-      margin: 0 auto;
+    .image-preview-wrap {
+      flex: 1;
       overflow-y: auto;
-      padding: 38px 32px;
-      background: #f8f5ef;
-      color: #1f2937;
-      border-radius: 8px;
-      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
+      padding-right: 6px;
     }
 
-    #previewTitle {
-      font-family: "Nanum Myeongjo", serif;
-      font-size: 22px;
-      line-height: 1.4;
+    .image-preview-empty {
+      padding: 40px 24px;
+      border: 1px dashed #3b4054;
+      border-radius: 16px;
+      color: #9ca3af;
       text-align: center;
-      margin: 0 0 30px;
-      color: #111827;
-      font-weight: 700;
+      line-height: 1.7;
+      background: #141722;
     }
 
-    #previewContent {
-      font-family: "Nanum Myeongjo", serif;
-      white-space: pre-wrap;
-      word-break: keep-all;
-      color: #1f2937;
+    .preview-page {
+      margin: 0 auto 22px;
+      background: #ffffff;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.32);
+      width: min(100%, 360px);
+    }
+
+    .preview-page img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .preview-page-number {
+      margin: -12px 0 22px;
+      color: #9ca3af;
+      text-align: center;
+      font-size: 13px;
     }
 
     .save-notice {
@@ -280,11 +293,11 @@
 
       .preview-card {
         position: static;
+        max-height: none;
       }
 
-      .paper-preview {
-        min-height: 520px;
-        max-height: 620px;
+      .image-preview-wrap {
+        max-height: 760px;
       }
     }
 
@@ -310,8 +323,8 @@
         width: 100%;
       }
 
-      .paper-preview {
-        padding: 28px 22px;
+      .preview-page {
+        width: 100%;
       }
     }
   </style>
@@ -323,7 +336,7 @@
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        나눔명조로 글을 쓰고, 페이지 번호가 들어간 A5 PNG 이미지로 저장할 수 있습니다.
+        나눔명조로 글을 쓰고, 실제 PNG 이미지 형태로 미리본 뒤 A5 PNG로 저장할 수 있습니다.
       </p>
     </header>
 
@@ -394,7 +407,6 @@
         </div>
 
         <div class="button-row">
-          <button id="loadButton" type="button">저장된 글 불러오기</button>
           <button id="pngButton" type="button">A5 PNG 저장</button>
           <button id="clearButton" type="button" class="danger">전체 삭제</button>
         </div>
@@ -403,15 +415,16 @@
       <aside class="preview-card">
         <div class="preview-header">
           <div>
-            <p class="preview-label">Preview</p>
-            <h2>미리보기</h2>
+            <p class="preview-label">Image Preview</p>
+            <h2>이미지 미리보기</h2>
           </div>
           <span class="paper-badge">A5</span>
         </div>
 
-        <div class="paper-preview">
-          <h1 id="previewTitle">제목 없는 소설</h1>
-          <div id="previewContent">여기에 본문 미리보기가 표시됩니다.</div>
+        <div id="imagePreviewWrap" class="image-preview-wrap">
+          <div class="image-preview-empty">
+            글을 입력하면 이곳에 실제 저장될 PNG 이미지 미리보기가 표시됩니다.
+          </div>
         </div>
       </aside>
     </main>
@@ -422,7 +435,7 @@
 
     <footer>
       <p>
-        긴 글은 여러 장의 PNG 파일로 나뉘어 저장됩니다. 홀수 페이지는 오른쪽 아래, 짝수 페이지는 왼쪽 아래에 페이지 번호가 들어갑니다.
+        저장된 글은 페이지를 열 때 자동으로 불러옵니다. 긴 글은 여러 장의 PNG 파일로 나뉘어 저장됩니다.
       </p>
     </footer>
   </div>
@@ -439,12 +452,10 @@
     const charCountNoSpace = document.getElementById("charCountNoSpace");
     const saveStatus = document.getElementById("saveStatus");
 
-    const loadButton = document.getElementById("loadButton");
     const pngButton = document.getElementById("pngButton");
     const clearButton = document.getElementById("clearButton");
 
-    const previewTitle = document.getElementById("previewTitle");
-    const previewContent = document.getElementById("previewContent");
+    const imagePreviewWrap = document.getElementById("imagePreviewWrap");
     const saveNotice = document.getElementById("saveNotice");
 
     const TITLE_KEY = "novelTitle";
@@ -455,6 +466,9 @@
 
     const ALLOWED_FONT_SIZES = ["9", "10", "11", "12", "13", "14", "15"];
     const ALLOWED_MARGINS = ["narrow", "normal", "wide"];
+
+    let previewTimer = null;
+    let previewVersion = 0;
 
     function updateCharCount() {
       const content = contentInput.value;
@@ -478,7 +492,7 @@
       return "normal";
     }
 
-    function applyStyle() {
+    function applyEditorStyle() {
       const normalizedFontSize = normalizeFontSize(fontSizeInput.value);
 
       if (fontSizeInput.value !== normalizedFontSize) {
@@ -490,30 +504,6 @@
 
       contentInput.style.fontSize = fontSizePx + "px";
       contentInput.style.lineHeight = lineHeight;
-
-      previewContent.style.fontSize = fontSizePx + "px";
-      previewContent.style.lineHeight = lineHeight;
-
-      const paperPreview = document.querySelector(".paper-preview");
-      const marginType = normalizeMargin(marginInput.value);
-
-      if (marginType === "narrow") {
-        paperPreview.style.padding = "30px 24px";
-      } else if (marginType === "wide") {
-        paperPreview.style.padding = "48px 42px";
-      } else {
-        paperPreview.style.padding = "38px 32px";
-      }
-    }
-
-    function updatePreview() {
-      const title = titleInput.value.trim();
-      const content = contentInput.value;
-
-      previewTitle.textContent = title || "제목 없는 소설";
-      previewContent.textContent = content || "여기에 본문 미리보기가 표시됩니다.";
-
-      applyStyle();
     }
 
     function saveNow() {
@@ -531,11 +521,12 @@
 
     function updateEverything() {
       updateCharCount();
-      updatePreview();
+      applyEditorStyle();
       saveNow();
+      scheduleImagePreview();
     }
 
-    function loadNovel() {
+    function loadNovelAutomatically() {
       const savedTitle = localStorage.getItem(TITLE_KEY);
       const savedContent = localStorage.getItem(CONTENT_KEY);
       const savedFontSize = localStorage.getItem(FONT_SIZE_KEY);
@@ -571,10 +562,10 @@
       }
 
       updateCharCount();
-      updatePreview();
-      applyStyle();
+      applyEditorStyle();
+      scheduleImagePreview();
 
-      saveStatus.textContent = "저장된 글을 불러왔습니다.";
+      saveStatus.textContent = "저장된 글 자동 불러오기 완료";
     }
 
     function makeSafeFileName(name) {
@@ -670,15 +661,6 @@
       }
     }
 
-    function downloadCanvasAsPng(canvas, fileName) {
-      const link = document.createElement("a");
-      link.download = fileName;
-      link.href = canvas.toDataURL("image/png");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
     function createCanvasPage() {
       const canvas = document.createElement("canvas");
 
@@ -697,106 +679,189 @@
       }
     }
 
+    async function createPngCanvases() {
+      await waitForNanumMyeongjo();
+
+      const title = titleInput.value.trim() || "제목 없는 소설";
+      const content = contentInput.value || "";
+
+      const margin = getCanvasMarginSettings(marginInput.value);
+
+      const pageWidth = 1240;
+      const pageHeight = 1748;
+
+      const bodyFontPx = getCanvasFontSize(normalizeFontSize(fontSizeInput.value));
+      const bodyLineHeight = bodyFontPx * Number(lineHeightInput.value);
+
+      const titleFontPx = 56;
+      const titleLineHeight = 78;
+
+      const usableWidth = pageWidth - margin.left - margin.right;
+
+      const measureCanvas = document.createElement("canvas");
+      const measureCtx = measureCanvas.getContext("2d");
+
+      measureCtx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
+      const bodyLines = wrapTextByCanvas(measureCtx, content, usableWidth);
+
+      measureCtx.font = `700 ${titleFontPx}px "Nanum Myeongjo", serif`;
+      const titleLines = wrapTextByCanvas(measureCtx, title, usableWidth);
+
+      const pages = [];
+
+      let pageIndex = 1;
+      let canvas = createCanvasPage();
+      let ctx = canvas.getContext("2d");
+
+      drawPageBase(ctx, canvas);
+
+      let y = margin.top;
+
+      ctx.fillStyle = "#111111";
+      ctx.textBaseline = "top";
+      ctx.font = `700 ${titleFontPx}px "Nanum Myeongjo", serif`;
+
+      for (const titleLine of titleLines) {
+        const titleWidth = ctx.measureText(titleLine).width;
+        const x = Math.max(margin.left, (pageWidth - titleWidth) / 2);
+
+        ctx.fillText(titleLine, x, y);
+        y += titleLineHeight;
+      }
+
+      y += 40;
+
+      ctx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
+      ctx.fillStyle = "#111111";
+
+      for (const line of bodyLines) {
+        if (y + bodyLineHeight > pageHeight - margin.bottom) {
+          drawPageNumber(ctx, pageIndex, canvas, margin);
+          pages.push(canvas);
+
+          pageIndex += 1;
+          canvas = createCanvasPage();
+          ctx = canvas.getContext("2d");
+
+          drawPageBase(ctx, canvas);
+
+          y = margin.top;
+
+          ctx.textBaseline = "top";
+          ctx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
+          ctx.fillStyle = "#111111";
+        }
+
+        if (line.trim() !== "") {
+          ctx.fillText(line, margin.left, y);
+        }
+
+        y += bodyLineHeight;
+      }
+
+      drawPageNumber(ctx, pageIndex, canvas, margin);
+      pages.push(canvas);
+
+      return pages;
+    }
+
+    function scheduleImagePreview() {
+      clearTimeout(previewTimer);
+
+      previewTimer = setTimeout(function () {
+        renderImagePreview();
+      }, 250);
+    }
+
+    async function renderImagePreview() {
+      const currentVersion = ++previewVersion;
+
+      const title = titleInput.value.trim();
+      const content = contentInput.value.trim();
+
+      if (!title && !content) {
+        imagePreviewWrap.innerHTML = `
+          <div class="image-preview-empty">
+            글을 입력하면 이곳에 실제 저장될 PNG 이미지 미리보기가 표시됩니다.
+          </div>
+        `;
+        return;
+      }
+
+      imagePreviewWrap.innerHTML = `
+        <div class="image-preview-empty">
+          이미지 미리보기를 만드는 중입니다...
+        </div>
+      `;
+
+      try {
+        const canvases = await createPngCanvases();
+
+        if (currentVersion !== previewVersion) {
+          return;
+        }
+
+        imagePreviewWrap.innerHTML = "";
+
+        canvases.forEach(function (canvas, index) {
+          const pageBox = document.createElement("div");
+          pageBox.className = "preview-page";
+
+          const img = document.createElement("img");
+          img.src = canvas.toDataURL("image/png");
+          img.alt = `${index + 1}쪽 미리보기`;
+
+          pageBox.appendChild(img);
+
+          const pageLabel = document.createElement("div");
+          pageLabel.className = "preview-page-number";
+          pageLabel.textContent = `${index + 1}쪽`;
+
+          imagePreviewWrap.appendChild(pageBox);
+          imagePreviewWrap.appendChild(pageLabel);
+        });
+      } catch (error) {
+        console.error(error);
+        imagePreviewWrap.innerHTML = `
+          <div class="image-preview-empty">
+            이미지 미리보기를 만드는 중 오류가 발생했습니다.
+          </div>
+        `;
+      }
+    }
+
+    function downloadCanvasAsPng(canvas, fileName) {
+      const link = document.createElement("a");
+      link.download = fileName;
+      link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
     async function savePng() {
-      updateEverything();
+      updateCharCount();
+      applyEditorStyle();
+      saveNow();
 
       pngButton.disabled = true;
       saveNotice.classList.add("active");
       saveStatus.textContent = "A5 PNG 만드는 중...";
 
       try {
-        await waitForNanumMyeongjo();
-
         const title = titleInput.value.trim() || "제목 없는 소설";
-        const content = contentInput.value || "";
-
         const safeTitle = makeSafeFileName(title);
 
-        const margin = getCanvasMarginSettings(marginInput.value);
+        const canvases = await createPngCanvases();
 
-        const pageWidth = 1240;
-        const pageHeight = 1748;
+        canvases.forEach(function (canvas, index) {
+          downloadCanvasAsPng(
+            canvas,
+            `${safeTitle}_A5_${String(index + 1).padStart(2, "0")}.png`
+          );
+        });
 
-        const bodyFontPx = getCanvasFontSize(normalizeFontSize(fontSizeInput.value));
-        const bodyLineHeight = bodyFontPx * Number(lineHeightInput.value);
-
-        const titleFontPx = 56;
-        const titleLineHeight = 78;
-
-        const usableWidth = pageWidth - margin.left - margin.right;
-
-        const measureCanvas = document.createElement("canvas");
-        const measureCtx = measureCanvas.getContext("2d");
-
-        measureCtx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
-        const bodyLines = wrapTextByCanvas(measureCtx, content, usableWidth);
-
-        measureCtx.font = `700 ${titleFontPx}px "Nanum Myeongjo", serif`;
-        const titleLines = wrapTextByCanvas(measureCtx, title, usableWidth);
-
-        let pageIndex = 1;
-        let canvas = createCanvasPage();
-        let ctx = canvas.getContext("2d");
-
-        drawPageBase(ctx, canvas);
-
-        let y = margin.top;
-
-        ctx.fillStyle = "#111111";
-        ctx.textBaseline = "top";
-        ctx.font = `700 ${titleFontPx}px "Nanum Myeongjo", serif`;
-
-        for (const titleLine of titleLines) {
-          const titleWidth = ctx.measureText(titleLine).width;
-          const x = Math.max(margin.left, (pageWidth - titleWidth) / 2);
-
-          ctx.fillText(titleLine, x, y);
-          y += titleLineHeight;
-        }
-
-        y += 40;
-
-        ctx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
-        ctx.fillStyle = "#111111";
-
-        for (const line of bodyLines) {
-          if (y + bodyLineHeight > pageHeight - margin.bottom) {
-            drawPageNumber(ctx, pageIndex, canvas, margin);
-
-            downloadCanvasAsPng(
-              canvas,
-              `${safeTitle}_A5_${String(pageIndex).padStart(2, "0")}.png`
-            );
-
-            pageIndex += 1;
-
-            canvas = createCanvasPage();
-            ctx = canvas.getContext("2d");
-
-            drawPageBase(ctx, canvas);
-
-            y = margin.top;
-
-            ctx.textBaseline = "top";
-            ctx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
-            ctx.fillStyle = "#111111";
-          }
-
-          if (line.trim() !== "") {
-            ctx.fillText(line, margin.left, y);
-          }
-
-          y += bodyLineHeight;
-        }
-
-        drawPageNumber(ctx, pageIndex, canvas, margin);
-
-        downloadCanvasAsPng(
-          canvas,
-          `${safeTitle}_A5_${String(pageIndex).padStart(2, "0")}.png`
-        );
-
-        saveStatus.textContent = `A5 PNG 저장 완료: ${pageIndex}장`;
+        saveStatus.textContent = `A5 PNG 저장 완료: ${canvases.length}장`;
       } catch (error) {
         console.error(error);
         saveStatus.textContent = "PNG 저장 실패";
@@ -827,8 +892,8 @@
       localStorage.removeItem(MARGIN_KEY);
 
       updateCharCount();
-      updatePreview();
-      applyStyle();
+      applyEditorStyle();
+      scheduleImagePreview();
 
       saveStatus.textContent = "전체 삭제 완료";
     }
@@ -854,11 +919,10 @@
     lineHeightInput.addEventListener("change", updateEverything);
     marginInput.addEventListener("change", updateEverything);
 
-    loadButton.addEventListener("click", loadNovel);
     pngButton.addEventListener("click", savePng);
     clearButton.addEventListener("click", clearAll);
 
-    loadNovel();
+    loadNovelAutomatically();
   </script>
 </body>
 </html>
