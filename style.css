@@ -1,6 +1,5 @@
 /* 
   전체 페이지 기본 설정입니다.
-  margin: 0은 브라우저 기본 여백을 없애는 역할입니다.
 */
 * {
   box-sizing: border-box;
@@ -53,12 +52,41 @@ h1 {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
 }
 
+/* 글꼴 크기, 줄간격 조절 영역 */
+.control-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 18px;
+  background: #141722;
+  border: 1px solid #2f3446;
+  border-radius: 16px;
+}
+
+.control-group {
+  flex: 1;
+  min-width: 180px;
+}
+
 /* label은 입력창 위의 설명 텍스트입니다 */
 label {
   display: block;
   margin-bottom: 10px;
   color: #d7d7dc;
   font-weight: 700;
+}
+
+/* 선택 박스 */
+select {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #3b4054;
+  border-radius: 14px;
+  background: #11131a;
+  color: #ffffff;
+  font-size: 15px;
+  outline: none;
 }
 
 /* 제목 입력창 */
@@ -89,9 +117,10 @@ textarea {
   outline: none;
 }
 
-/* 입력창을 클릭했을 때 테두리 강조 */
+/* 입력창이나 선택 박스를 클릭했을 때 테두리 강조 */
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: #8b5cf6;
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
 }
@@ -158,6 +187,11 @@ footer {
   font-size: 14px;
 }
 
+/* PDF 출력용 영역은 평소에는 숨깁니다 */
+.print-area {
+  display: none;
+}
+
 /* 화면이 좁을 때 글자 크기 조정 */
 @media (max-width: 600px) {
   h1 {
@@ -178,5 +212,55 @@ footer {
 
   button {
     width: 100%;
+  }
+}
+
+/* 
+  여기부터는 인쇄/PDF 저장용 설정입니다.
+  window.print()가 실행되면 이 스타일이 적용됩니다.
+*/
+@media print {
+  /* 기존 화면 요소는 숨깁니다 */
+  .app-header,
+  .editor-card,
+  footer {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .app {
+    width: 100%;
+    padding: 0;
+  }
+
+  /* PDF로 출력할 영역만 보이게 합니다 */
+  .print-area {
+    display: block;
+    width: 100%;
+    padding: 24mm 18mm;
+    color: #000000;
+    background: #ffffff;
+  }
+
+  #printTitle {
+    font-size: 24px;
+    line-height: 1.4;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+
+  #printContent {
+    white-space: pre-wrap;
+    word-break: keep-all;
+  }
+
+  /* 인쇄할 때 페이지 여백 설정 */
+  @page {
+    size: A4;
+    margin: 16mm;
   }
 }
