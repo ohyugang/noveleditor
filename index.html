@@ -2,20 +2,318 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>웹 소설 편집기</title>
 
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: #11131a;
+      color: #f4f4f5;
+    }
+
+    .app {
+      width: min(1400px, 94%);
+      margin: 0 auto;
+      padding: 48px 0;
+    }
+
+    .app-header {
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      color: #9ca3af;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 42px;
+      line-height: 1.2;
+    }
+
+    .description {
+      color: #c4c4c7;
+      margin-top: 12px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .editor-card,
+    .preview-card {
+      background: #1a1d29;
+      border: 1px solid #2f3446;
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .control-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 18px;
+      background: #141722;
+      border: 1px solid #2f3446;
+      border-radius: 16px;
+    }
+
+    .control-group {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      color: #d7d7dc;
+      font-weight: 700;
+    }
+
+    select,
+    input {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #3b4054;
+      border-radius: 14px;
+      background: #11131a;
+      color: #ffffff;
+      font-size: 16px;
+      outline: none;
+    }
+
+    input {
+      margin-bottom: 24px;
+      font-size: 18px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 520px;
+      padding: 18px;
+      border: 1px solid #3b4054;
+      border-radius: 14px;
+      background: #11131a;
+      color: #ffffff;
+      font-size: 17px;
+      line-height: 1.8;
+      resize: vertical;
+      outline: none;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+      color: #c4c4c7;
+    }
+
+    .status-row strong {
+      color: #ffffff;
+    }
+
+    #saveStatus {
+      margin: 0;
+      color: #a7f3d0;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 13px 18px;
+      background: #8b5cf6;
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      background: #7c3aed;
+    }
+
+    button.danger {
+      background: #ef4444;
+    }
+
+    button.danger:hover {
+      background: #dc2626;
+    }
+
+    .preview-card {
+      position: sticky;
+      top: 24px;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .preview-label {
+      margin: 0 0 6px;
+      color: #9ca3af;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .preview-header h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .paper-badge {
+      padding: 7px 10px;
+      border: 1px solid #3b4054;
+      border-radius: 999px;
+      color: #d7d7dc;
+      font-size: 13px;
+      background: #141722;
+    }
+
+    .paper-preview {
+      min-height: 720px;
+      max-height: 760px;
+      overflow-y: auto;
+      padding: 42px 38px;
+      background: #f8f5ef;
+      color: #1f2937;
+      border-radius: 8px;
+      box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.08);
+    }
+
+    #previewTitle {
+      font-size: 24px;
+      line-height: 1.4;
+      text-align: center;
+      margin: 0 0 32px;
+      color: #111827;
+    }
+
+    #previewContent {
+      white-space: pre-wrap;
+      word-break: keep-all;
+      color: #1f2937;
+    }
+
+    footer {
+      margin-top: 20px;
+      color: #8f93a3;
+      font-size: 14px;
+    }
+
+    #pdfArea {
+      display: none;
+      width: 794px;
+      min-height: 1123px;
+      padding: 72px 64px;
+      background: #ffffff;
+      color: #000000;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+
+    #pdfTitle {
+      margin: 0 0 36px;
+      text-align: center;
+      font-size: 24px;
+      line-height: 1.4;
+      color: #000000;
+    }
+
+    #pdfContent {
+      white-space: pre-wrap;
+      word-break: keep-all;
+      color: #000000;
+    }
+
+    @media (max-width: 1000px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-card {
+        position: static;
+      }
+
+      .paper-preview {
+        min-height: 520px;
+        max-height: 620px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 32px;
+      }
+
+      .editor-card,
+      .preview-card {
+        padding: 20px;
+      }
+
+      textarea {
+        min-height: 360px;
+      }
+
+      .button-row {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .paper-preview {
+        padding: 28px 22px;
+      }
+    }
+  </style>
 </head>
+
 <body>
   <div class="app">
     <header class="app-header">
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        글을 쓰면서 미리보고, 글꼴 크기와 줄간격을 조절하고, PDF로 바로 저장할 수 있는 원고 작업실입니다.
+        글을 쓰면 오른쪽 미리보기에 바로 반영되고, 브라우저에 즉시 저장됩니다.
       </p>
     </header>
 
@@ -75,13 +373,13 @@
             <strong id="charCountNoSpace">0</strong>
           </div>
 
-          <p id="saveStatus">아직 저장되지 않았습니다.</p>
+          <p id="saveStatus">준비 완료</p>
         </div>
 
         <div class="button-row">
-          <button id="loadButton">저장된 글 불러오기</button>
-          <button id="pdfButton">PDF 바로 저장</button>
-          <button id="clearButton" class="danger">전체 삭제</button>
+          <button id="loadButton" type="button">저장된 글 불러오기</button>
+          <button id="pdfButton" type="button">PDF 바로 저장</button>
+          <button id="clearButton" type="button" class="danger">전체 삭제</button>
         </div>
       </section>
 
@@ -96,26 +394,256 @@
 
         <div class="paper-preview">
           <h1 id="previewTitle">제목 없는 소설</h1>
-          <div id="previewContent" class="preview-content">
-            여기에 본문 미리보기가 표시됩니다.
-          </div>
+          <div id="previewContent">여기에 본문 미리보기가 표시됩니다.</div>
         </div>
       </aside>
     </main>
 
-    <section id="printArea" class="print-area">
-      <h1 id="printTitle"></h1>
-      <div id="printContent"></div>
+    <section id="pdfArea">
+      <h1 id="pdfTitle"></h1>
+      <div id="pdfContent"></div>
     </section>
 
     <footer>
       <p>
-        저장은 현재 사용하는 브라우저에만 남습니다. PDF 저장 버튼을 누르면 파일이 바로 다운로드됩니다.
+        이 버전은 index.html 하나만으로 작동합니다. 글을 입력하면 즉시 저장되고 미리보기에 바로 반영됩니다.
       </p>
     </footer>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <script src="script.js"></script>
+
+  <script>
+    const titleInput = document.getElementById("titleInput");
+    const contentInput = document.getElementById("contentInput");
+
+    const fontSizeInput = document.getElementById("fontSizeInput");
+    const lineHeightInput = document.getElementById("lineHeightInput");
+
+    const charCount = document.getElementById("charCount");
+    const charCountNoSpace = document.getElementById("charCountNoSpace");
+    const saveStatus = document.getElementById("saveStatus");
+
+    const loadButton = document.getElementById("loadButton");
+    const pdfButton = document.getElementById("pdfButton");
+    const clearButton = document.getElementById("clearButton");
+
+    const previewTitle = document.getElementById("previewTitle");
+    const previewContent = document.getElementById("previewContent");
+
+    const pdfArea = document.getElementById("pdfArea");
+    const pdfTitle = document.getElementById("pdfTitle");
+    const pdfContent = document.getElementById("pdfContent");
+
+    const TITLE_KEY = "novelTitle";
+    const CONTENT_KEY = "novelContent";
+    const FONT_SIZE_KEY = "novelFontSize";
+    const LINE_HEIGHT_KEY = "novelLineHeight";
+
+    function updateCharCount() {
+      const content = contentInput.value;
+      charCount.textContent = content.length;
+      charCountNoSpace.textContent = content.replace(/\s/g, "").length;
+    }
+
+    function applyStyle() {
+      const fontSize = fontSizeInput.value + "px";
+      const lineHeight = lineHeightInput.value;
+
+      contentInput.style.fontSize = fontSize;
+      contentInput.style.lineHeight = lineHeight;
+
+      previewContent.style.fontSize = fontSize;
+      previewContent.style.lineHeight = lineHeight;
+
+      pdfContent.style.fontSize = fontSize;
+      pdfContent.style.lineHeight = lineHeight;
+    }
+
+    function updatePreview() {
+      const title = titleInput.value.trim();
+      const content = contentInput.value;
+
+      previewTitle.textContent = title || "제목 없는 소설";
+      previewContent.textContent = content || "여기에 본문 미리보기가 표시됩니다.";
+
+      applyStyle();
+    }
+
+    function saveNow() {
+      localStorage.setItem(TITLE_KEY, titleInput.value);
+      localStorage.setItem(CONTENT_KEY, contentInput.value);
+      localStorage.setItem(FONT_SIZE_KEY, fontSizeInput.value);
+      localStorage.setItem(LINE_HEIGHT_KEY, lineHeightInput.value);
+
+      saveStatus.textContent = "저장됨";
+    }
+
+    function updateEverything() {
+      updateCharCount();
+      updatePreview();
+      saveNow();
+    }
+
+    function loadNovel() {
+      const savedTitle = localStorage.getItem(TITLE_KEY);
+      const savedContent = localStorage.getItem(CONTENT_KEY);
+      const savedFontSize = localStorage.getItem(FONT_SIZE_KEY);
+      const savedLineHeight = localStorage.getItem(LINE_HEIGHT_KEY);
+
+      if (savedTitle !== null) {
+        titleInput.value = savedTitle;
+      }
+
+      if (savedContent !== null) {
+        contentInput.value = savedContent;
+      }
+
+      if (savedFontSize !== null) {
+        fontSizeInput.value = savedFontSize;
+      }
+
+      if (savedLineHeight !== null) {
+        lineHeightInput.value = savedLineHeight;
+      }
+
+      updateCharCount();
+      updatePreview();
+      applyStyle();
+
+      saveStatus.textContent = "저장된 글을 불러왔습니다.";
+    }
+
+    function makeSafeFileName(name) {
+      return name.replace(/[\\/:*?"<>|]/g, "_");
+    }
+
+    function preparePdfArea() {
+      const title = titleInput.value.trim() || "제목 없는 소설";
+      const content = contentInput.value || "";
+
+      pdfTitle.textContent = title;
+      pdfContent.textContent = content;
+
+      applyStyle();
+
+      pdfArea.style.display = "block";
+      pdfArea.style.position = "fixed";
+      pdfArea.style.left = "-9999px";
+      pdfArea.style.top = "0";
+      pdfArea.style.width = "794px";
+      pdfArea.style.minHeight = "1123px";
+      pdfArea.style.padding = "72px 64px";
+      pdfArea.style.background = "#ffffff";
+      pdfArea.style.color = "#000000";
+    }
+
+    function hidePdfArea() {
+      pdfArea.style.display = "none";
+      pdfArea.style.position = "";
+      pdfArea.style.left = "";
+      pdfArea.style.top = "";
+    }
+
+    function savePdf() {
+      updateEverything();
+
+      if (typeof html2pdf === "undefined") {
+        alert("PDF 기능을 불러오지 못했어요. 인터넷 연결을 확인해주세요.");
+        return;
+      }
+
+      saveStatus.textContent = "PDF 만드는 중...";
+
+      preparePdfArea();
+
+      const title = titleInput.value.trim() || "제목 없는 소설";
+      const fileName = makeSafeFileName(title) + ".pdf";
+
+      const options = {
+        margin: 0,
+        filename: fileName,
+        image: {
+          type: "jpeg",
+          quality: 0.98
+        },
+        html2canvas: {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          useCORS: true
+        },
+        jsPDF: {
+          unit: "px",
+          format: [794, 1123],
+          orientation: "portrait"
+        }
+      };
+
+      html2pdf()
+        .set(options)
+        .from(pdfArea)
+        .save()
+        .then(function () {
+          hidePdfArea();
+          saveStatus.textContent = "PDF 저장 완료";
+        })
+        .catch(function (error) {
+          console.error(error);
+          hidePdfArea();
+          saveStatus.textContent = "PDF 저장 실패";
+          alert("PDF 저장에 실패했어요.");
+        });
+    }
+
+    function clearAll() {
+      const result = confirm("정말 전체 내용을 삭제할까요? 저장된 내용도 함께 삭제됩니다.");
+
+      if (!result) {
+        return;
+      }
+
+      titleInput.value = "";
+      contentInput.value = "";
+      fontSizeInput.value = "17";
+      lineHeightInput.value = "1.8";
+
+      localStorage.removeItem(TITLE_KEY);
+      localStorage.removeItem(CONTENT_KEY);
+      localStorage.removeItem(FONT_SIZE_KEY);
+      localStorage.removeItem(LINE_HEIGHT_KEY);
+
+      updateCharCount();
+      updatePreview();
+      applyStyle();
+
+      saveStatus.textContent = "전체 삭제 완료";
+    }
+
+    titleInput.addEventListener("input", updateEverything);
+    contentInput.addEventListener("input", updateEverything);
+
+    titleInput.addEventListener("keyup", updateEverything);
+    contentInput.addEventListener("keyup", updateEverything);
+
+    titleInput.addEventListener("paste", function () {
+      setTimeout(updateEverything, 0);
+    });
+
+    contentInput.addEventListener("paste", function () {
+      setTimeout(updateEverything, 0);
+    });
+
+    titleInput.addEventListener("compositionend", updateEverything);
+    contentInput.addEventListener("compositionend", updateEverything);
+
+    fontSizeInput.addEventListener("change", updateEverything);
+    lineHeightInput.addEventListener("change", updateEverything);
+
+    loadButton.addEventListener("click", loadNovel);
+    pdfButton.addEventListener("click", savePdf);
+    clearButton.addEventListener("click", clearAll);
+
+    loadNovel();
+  </script>
 </body>
 </html>
