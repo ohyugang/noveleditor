@@ -7,13 +7,15 @@
   <title>웹 소설 편집기</title>
 
   <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap");
+
     * {
       box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      font-family: "Nanum Myeongjo", serif;
       background: #11131a;
       color: #f4f4f5;
     }
@@ -94,6 +96,7 @@
       border-radius: 14px;
       background: #11131a;
       color: #ffffff;
+      font-family: "Nanum Myeongjo", serif;
       font-size: 16px;
       outline: none;
     }
@@ -111,6 +114,7 @@
       border-radius: 14px;
       background: #11131a;
       color: #ffffff;
+      font-family: "Nanum Myeongjo", serif;
       font-size: 16px;
       line-height: 1.8;
       resize: vertical;
@@ -156,6 +160,7 @@
       padding: 13px 18px;
       background: #8b5cf6;
       color: #ffffff;
+      font-family: "Nanum Myeongjo", serif;
       font-weight: 700;
       cursor: pointer;
       transition: 0.2s;
@@ -228,14 +233,17 @@
     }
 
     #previewTitle {
+      font-family: "Nanum Myeongjo", serif;
       font-size: 22px;
       line-height: 1.4;
       text-align: center;
       margin: 0 0 30px;
       color: #111827;
+      font-weight: 700;
     }
 
     #previewContent {
+      font-family: "Nanum Myeongjo", serif;
       white-space: pre-wrap;
       word-break: keep-all;
       color: #1f2937;
@@ -315,7 +323,7 @@
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        글을 쓰면 오른쪽 미리보기에 바로 반영되고, A5 PNG 이미지로 저장됩니다.
+        나눔명조로 글을 쓰고, A5 PNG 이미지로 저장할 수 있는 소설 내지 편집기입니다.
       </p>
     </header>
 
@@ -414,7 +422,7 @@
 
     <footer>
       <p>
-        긴 글은 여러 장의 PNG 파일로 나뉘어 저장됩니다.
+        긴 글은 여러 장의 PNG 파일로 나뉘어 저장됩니다. 나눔명조 웹폰트를 불러오기 위해 인터넷 연결이 필요합니다.
       </p>
     </footer>
   </div>
@@ -655,14 +663,18 @@
     function createCanvasPage() {
       const canvas = document.createElement("canvas");
 
-      /*
-        A5 비율입니다.
-        148mm x 210mm 비율을 고해상도 PNG로 저장합니다.
-      */
       canvas.width = 1240;
       canvas.height = 1748;
 
       return canvas;
+    }
+
+    async function waitForNanumMyeongjo() {
+      if (document.fonts) {
+        await document.fonts.load('400 48px "Nanum Myeongjo"');
+        await document.fonts.load('700 56px "Nanum Myeongjo"');
+        await document.fonts.ready;
+      }
     }
 
     async function savePng() {
@@ -673,6 +685,8 @@
       saveStatus.textContent = "A5 PNG 만드는 중...";
 
       try {
+        await waitForNanumMyeongjo();
+
         const title = titleInput.value.trim() || "제목 없는 소설";
         const content = contentInput.value || "";
 
@@ -690,19 +704,14 @@
         const titleLineHeight = 78;
 
         const usableWidth = pageWidth - margin.left - margin.right;
-        const usableHeight = pageHeight - margin.top - margin.bottom;
 
-        /*
-          줄바꿈 계산용 임시 캔버스입니다.
-        */
         const measureCanvas = document.createElement("canvas");
         const measureCtx = measureCanvas.getContext("2d");
 
-        measureCtx.font = `${bodyFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
-
+        measureCtx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
         const bodyLines = wrapTextByCanvas(measureCtx, content, usableWidth);
 
-        measureCtx.font = `700 ${titleFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+        measureCtx.font = `700 ${titleFontPx}px "Nanum Myeongjo", serif`;
         const titleLines = wrapTextByCanvas(measureCtx, title, usableWidth);
 
         let pageIndex = 1;
@@ -715,7 +724,7 @@
 
         ctx.fillStyle = "#111111";
         ctx.textBaseline = "top";
-        ctx.font = `700 ${titleFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+        ctx.font = `700 ${titleFontPx}px "Nanum Myeongjo", serif`;
 
         for (const titleLine of titleLines) {
           const titleWidth = ctx.measureText(titleLine).width;
@@ -727,7 +736,7 @@
 
         y += 40;
 
-        ctx.font = `${bodyFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+        ctx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
         ctx.fillStyle = "#111111";
 
         for (const line of bodyLines) {
@@ -747,7 +756,7 @@
             y = margin.top;
 
             ctx.textBaseline = "top";
-            ctx.font = `${bodyFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+            ctx.font = `${bodyFontPx}px "Nanum Myeongjo", serif`;
             ctx.fillStyle = "#111111";
           }
 
