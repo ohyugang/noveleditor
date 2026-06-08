@@ -24,6 +24,9 @@ const CONTENT_KEY = "novelContent";
 const FONT_SIZE_KEY = "novelFontSize";
 const LINE_HEIGHT_KEY = "novelLineHeight";
 
+/*
+  글자 수 계산
+*/
 function updateCharCount() {
   const content = contentInput.value;
 
@@ -33,6 +36,9 @@ function updateCharCount() {
   charCountNoSpace.textContent = contentWithoutSpace.length;
 }
 
+/*
+  글꼴 크기와 줄간격 적용
+*/
 function applyEditorStyle() {
   const fontSize = fontSizeInput.value;
   const lineHeight = lineHeightInput.value;
@@ -44,6 +50,9 @@ function applyEditorStyle() {
   previewContent.style.lineHeight = lineHeight;
 }
 
+/*
+  미리보기 업데이트
+*/
 function updatePreview() {
   const title = titleInput.value.trim();
   const content = contentInput.value;
@@ -54,15 +63,31 @@ function updatePreview() {
   applyEditorStyle();
 }
 
+/*
+  즉시 저장
+*/
 function saveNovel() {
   localStorage.setItem(TITLE_KEY, titleInput.value);
   localStorage.setItem(CONTENT_KEY, contentInput.value);
   localStorage.setItem(FONT_SIZE_KEY, fontSizeInput.value);
   localStorage.setItem(LINE_HEIGHT_KEY, lineHeightInput.value);
 
-  saveStatus.textContent = "자동 저장되었습니다.";
+  saveStatus.textContent = "저장됨";
 }
 
+/*
+  화면 전체 즉시 갱신
+  글을 입력할 때마다 이 함수가 실행됩니다.
+*/
+function updateAllNow() {
+  updateCharCount();
+  updatePreview();
+  saveNovel();
+}
+
+/*
+  저장된 글 불러오기
+*/
 function loadNovel() {
   const savedTitle = localStorage.getItem(TITLE_KEY);
   const savedContent = localStorage.getItem(CONTENT_KEY);
@@ -92,6 +117,9 @@ function loadNovel() {
   saveStatus.textContent = "저장된 글을 불러왔습니다.";
 }
 
+/*
+  PDF 영역 스타일 초기화
+*/
 function resetPrintAreaStyle() {
   printArea.style.display = "none";
   printArea.style.position = "";
@@ -105,6 +133,9 @@ function resetPrintAreaStyle() {
   printArea.style.zIndex = "";
 }
 
+/*
+  PDF로 만들 영역 준비
+*/
 function preparePrintArea() {
   const title = titleInput.value.trim() || "제목 없는 소설";
   const content = contentInput.value || "";
@@ -127,19 +158,26 @@ function preparePrintArea() {
   printArea.style.zIndex = "-1";
 }
 
+/*
+  파일 이름에 쓸 수 없는 문자 제거
+*/
 function makeSafeFileName(fileName) {
   return fileName.replace(/[\\/:*?"<>|]/g, "_");
 }
 
+/*
+  PDF 바로 저장
+*/
 function saveAsPdf() {
   if (typeof html2pdf === "undefined") {
-    alert("PDF 라이브러리를 불러오지 못했어요. 인터넷 연결이나 script 순서를 확인해주세요.");
+    alert("PDF 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해주세요.");
     return;
   }
 
+  updateAllNow();
+
   saveStatus.textContent = "PDF를 만드는 중입니다...";
 
-  saveNovel();
   preparePrintArea();
 
   const title = titleInput.value.trim() || "제목 없는 소설";
@@ -183,6 +221,9 @@ function saveAsPdf() {
     });
 }
 
+/*
+  전체 삭제
+*/
 function clearNovel() {
   const result = confirm("정말 전체 내용을 삭제할까요? 저장된 내용도 함께 삭제됩니다.");
 
@@ -207,33 +248,35 @@ function clearNovel() {
   saveStatus.textContent = "전체 내용이 삭제되었습니다.";
 }
 
+/*
+  붙여넣기, 한글 입력, 모바일 입력까지 최대한 바로 반영되게 이벤트를 여러 개 연결합니다.
+*/
 document.addEventListener("DOMContentLoaded", () => {
-  titleInput.addEventListener("input", () => {
-    updatePreview();
-    saveNovel();
-  });
+  loadNovel();
 
-  contentInput.addEventListener("input", () => {
-    updateCharCount();
-    updatePreview();
-    saveNovel();
+  titleInput.addEventListener("input", updateAllNow);
+  titleInput.addEventListener("keyup", updateAllNow);
+  titleInput.addEventListener("change", updateAllNow);
+  titleInput.addEventListener("paste", () => {
+    setTimeout(updateAllNow, 0);
   });
+  titleInput.addEventListener("compositionend", updateAllNow);
 
-  fontSizeInput.addEventListener("change", () => {
-    applyEditorStyle();
-    updatePreview();
-    saveNovel();
+  contentInput.addEventListener("input", updateAllNow);
+  contentInput.addEventListener("keyup", updateAllNow);
+  contentInput.addEventListener("change", updateAllNow);
+  contentInput.addEventListener("paste", () => {
+    setTimeout(updateAllNow, 0);
   });
+  contentInput.addEventListener("compositionend", updateAllNow);
 
-  lineHeightInput.addEventListener("change", () => {
-    applyEditorStyle();
-    updatePreview();
-    saveNovel();
-  });
+  fontSizeInput.addEventListener("input", updateAllNow);
+  fontSizeInput.addEventListener("change", updateAllNow);
+
+  lineHeightInput.addEventListener("input", updateAllNow);
+  lineHeightInput.addEventListener("change", updateAllNow);
 
   loadButton.addEventListener("click", loadNovel);
   pdfButton.addEventListener("click", saveAsPdf);
   clearButton.addEventListener("click", clearNovel);
-
-  loadNovel();
 });
