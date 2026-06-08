@@ -536,9 +536,20 @@
       return name.replace(/[\\/:*?"<>|]/g, "_");
     }
 
+    /*
+      글자가 오른쪽에서 잘리지 않게 줄을 나누는 함수입니다.
+      기존보다 더 보수적으로 계산해서, 실제 PDF에 들어갈 때 여유 공간을 남깁니다.
+    */
     function splitTextByWidth(text, font, fontSize, maxWidth) {
       const lines = [];
       const paragraphs = text.replace(/\r/g, "").split("\n");
+
+      /*
+        안전 계수입니다.
+        1.0에 가까울수록 한 줄이 길어지고,
+        0.88처럼 낮을수록 오른쪽에 여백이 더 남습니다.
+      */
+      const safeWidth = maxWidth * 0.88;
 
       paragraphs.forEach(function (paragraph) {
         if (paragraph.trim() === "") {
@@ -552,7 +563,7 @@
           const testLine = currentLine + char;
           const width = font.widthOfTextAtSize(testLine, fontSize);
 
-          if (width > maxWidth && currentLine !== "") {
+          if (width > safeWidth && currentLine !== "") {
             lines.push(currentLine);
             currentLine = char;
           } else {
@@ -606,7 +617,7 @@
 
         /*
           A5 판형 크기입니다.
-          단위는 PDF에서 쓰는 point입니다.
+          단위는 PDF point입니다.
           A5 = 148mm x 210mm
           약 419.53pt x 595.28pt
         */
@@ -614,12 +625,12 @@
         const pageHeight = 595.28;
 
         /*
-          A5는 A4보다 작으므로 여백도 작게 잡았습니다.
+          글자 잘림 방지를 위해 여백을 조금 넉넉하게 잡았습니다.
         */
-        const marginTop = 45;
-        const marginBottom = 42;
-        const marginLeft = 42;
-        const marginRight = 42;
+        const marginTop = 46;
+        const marginBottom = 44;
+        const marginLeft = 48;
+        const marginRight = 48;
 
         const usableWidth = pageWidth - marginLeft - marginRight;
 
@@ -629,22 +640,36 @@
         const bodyFontSize = Number(normalizeFontSize(fontSizeInput.value));
         const bodyLineHeight = bodyFontSize * Number(lineHeightInput.value);
 
-        const titleFontSize = 16;
-        const titleLineHeight = 24;
+        const titleFontSize = 15;
+        const titleLineHeight = 22;
 
         let page = pdfDoc.addPage([pageWidth, pageHeight]);
         let y = pageHeight - marginTop;
 
-        const titleWidth = koreanFont.widthOfTextAtSize(title, titleFontSize);
-        page.drawText(title, {
-          x: (pageWidth - titleWidth) / 2,
-          y: y,
-          size: titleFontSize,
-          font: koreanFont,
-          color: rgb(0, 0, 0)
-        });
+        /*
+          제목도 길면 자동 줄바꿈합니다.
+        */
+        const titleLines = splitTextByWidth(title, koreanFont, titleFontSize, usableWidth);
 
-        y -= titleLineHeight + 18;
+        for (const titleLine of titleLines) {
+          if (y < marginBottom) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            y = pageHeight - marginTop;
+          }
+
+          const titleWidth = koreanFont.widthOfTextAtSize(titleLine, titleFontSize);
+          page.drawText(titleLine, {
+            x: Math.max(marginLeft, (pageWidth - titleWidth) / 2),
+            y: y,
+            size: titleFontSize,
+            font: koreanFont,
+            color: rgb(0, 0, 0)
+          });
+
+          y -= titleLineHeight;
+        }
+
+        y -= 14;
 
         const lines = splitTextByWidth(content, koreanFont, bodyFontSize, usableWidth);
 
