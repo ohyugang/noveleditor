@@ -15,6 +15,9 @@ const loadButton = document.getElementById("loadButton");
 const pdfButton = document.getElementById("pdfButton");
 const clearButton = document.getElementById("clearButton");
 
+const previewTitle = document.getElementById("previewTitle");
+const previewContent = document.getElementById("previewContent");
+
 const printTitle = document.getElementById("printTitle");
 const printContent = document.getElementById("printContent");
 
@@ -43,7 +46,7 @@ function updateCharCount() {
 }
 
 /*
-  글꼴 크기와 줄간격을 본문 입력창에 적용하는 함수입니다.
+  글꼴 크기와 줄간격을 본문 입력창과 미리보기에 적용하는 함수입니다.
 */
 function applyEditorStyle() {
   const fontSize = fontSizeInput.value;
@@ -54,6 +57,26 @@ function applyEditorStyle() {
 
   // 본문 입력창에 선택한 줄간격을 적용합니다.
   contentInput.style.lineHeight = lineHeight;
+
+  // 미리보기 본문에도 같은 글꼴 크기와 줄간격을 적용합니다.
+  previewContent.style.fontSize = `${fontSize}px`;
+  previewContent.style.lineHeight = lineHeight;
+}
+
+/*
+  미리보기 화면을 업데이트하는 함수입니다.
+*/
+function updatePreview() {
+  const title = titleInput.value.trim();
+  const content = contentInput.value.trim();
+
+  // 제목이 비어 있으면 기본 문구를 보여줍니다.
+  previewTitle.textContent = title || "제목 없는 소설";
+
+  // 본문이 비어 있으면 안내 문구를 보여줍니다.
+  previewContent.textContent = content || "여기에 본문 미리보기가 표시됩니다.";
+
+  applyEditorStyle();
 }
 
 /*
@@ -100,6 +123,7 @@ function loadNovel() {
 
   applyEditorStyle();
   updateCharCount();
+  updatePreview();
 
   saveStatus.textContent = "저장된 글을 불러왔습니다.";
 }
@@ -158,39 +182,44 @@ function clearNovel() {
 
     applyEditorStyle();
     updateCharCount();
+    updatePreview();
 
     saveStatus.textContent = "전체 내용이 삭제되었습니다.";
   }
 }
 
 /*
-  제목 입력 시 자동 저장
+  제목 입력 시 자동 저장 + 미리보기 업데이트
 */
 titleInput.addEventListener("input", () => {
+  updatePreview();
   saveNovel();
 });
 
 /*
-  본문 입력 시 글자 수 계산 + 자동 저장
+  본문 입력 시 글자 수 계산 + 자동 저장 + 미리보기 업데이트
 */
 contentInput.addEventListener("input", () => {
   updateCharCount();
+  updatePreview();
   saveNovel();
 });
 
 /*
-  글꼴 크기 변경 시 스타일 적용 + 자동 저장
+  글꼴 크기 변경 시 스타일 적용 + 미리보기 업데이트 + 자동 저장
 */
 fontSizeInput.addEventListener("change", () => {
   applyEditorStyle();
+  updatePreview();
   saveNovel();
 });
 
 /*
-  줄간격 변경 시 스타일 적용 + 자동 저장
+  줄간격 변경 시 스타일 적용 + 미리보기 업데이트 + 자동 저장
 */
 lineHeightInput.addEventListener("change", () => {
   applyEditorStyle();
+  updatePreview();
   saveNovel();
 });
 
