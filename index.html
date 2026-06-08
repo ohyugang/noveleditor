@@ -1,1 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
 
+  <!-- 모바일 화면에서도 보기 좋게 만드는 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>웹 소설 편집기</title>
+
+  <!-- style.css 파일을 연결합니다 -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- 상단 제목 영역 -->
+    <header class="app-header">
+      <p class="eyebrow">Novel Editor</p>
+      <h1>웹 소설 편집기</h1>
+      <p class="description">
+        브라우저에 자동 저장되는 초간단 원고 작업실입니다.
+      </p>
+    </header>
+
+    <!-- 제목 입력 영역 -->
+    <section class="editor-card">
+      <label for="titleInput">소설 제목</label>
+      <input 
+        type="text" 
+        id="titleInput" 
+        placeholder="제목을 입력하세요" 
+      />
+
+      <!-- 본문 입력 영역 -->
+      <label for="contentInput">본문</label>
+      <textarea 
+        id="contentInput" 
+        placeholder="여기에 소설을 작성하세요..."
+      ></textarea>
+
+      <!-- 글자 수와 저장 상태 표시 -->
+      <div class="status-row">
+        <div>
+          <span>공백 포함 글자 수: </span>
+          <strong id="charCount">0</strong>
+        </div>
+
+        <div>
+          <span>공백 제외 글자 수: </span>
+          <strong id="charCountNoSpace">0</strong>
+        </div>
+
+        <p id="saveStatus">아직 저장되지 않았습니다.</p>
+      </div>
+
+      <!-- 버튼 영역 -->
+      <div class="button-row">
+        <button id="loadButton">저장된 글 불러오기</button>
+        <button id="downloadButton">TXT 다운로드</button>
+        <button id="clearButton" class="danger">전체 삭제</button>
+      </div>
+    </section>
+
+    <!-- 하단 안내 -->
+    <footer>
+      <p>
+        저장은 현재 사용하는 브라우저에만 남습니다. 다른 컴퓨터나 브라우저에서는 보이지 않아요.
+      </p>
+    </footer>
+  </div>
+
+  <!-- script.js 파일을 연결합니다 -->
+  <script src="script.js"></script>
+</body>
+</html>
