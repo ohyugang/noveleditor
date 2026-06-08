@@ -166,6 +166,12 @@
       background: #7c3aed;
     }
 
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+
     button.danger {
       background: #ef4444;
     }
@@ -239,6 +245,7 @@
       font-size: 14px;
     }
 
+    /* PDF용 종이 */
     #pdfArea {
       display: none;
       width: 794px;
@@ -246,7 +253,18 @@
       padding: 72px 64px;
       background: #ffffff;
       color: #000000;
-      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+
+    /* PDF 만드는 동안만 화면 위에 잠깐 띄움 */
+    #pdfArea.pdf-active {
+      display: block;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 999999;
+      background: #ffffff;
+      color: #000000;
     }
 
     #pdfTitle {
@@ -261,6 +279,24 @@
       white-space: pre-wrap;
       word-break: keep-all;
       color: #000000;
+    }
+
+    .pdf-notice {
+      display: none;
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 1000000;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background: #111827;
+      color: #ffffff;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      font-size: 14px;
+    }
+
+    .pdf-notice.active {
+      display: block;
     }
 
     @media (max-width: 1000px) {
@@ -404,9 +440,13 @@
       <div id="pdfContent"></div>
     </section>
 
+    <div id="pdfNotice" class="pdf-notice">
+      PDF를 만드는 중입니다...
+    </div>
+
     <footer>
       <p>
-        이 버전은 index.html 하나만으로 작동합니다. 글을 입력하면 즉시 저장되고 미리보기에 바로 반영됩니다.
+        PDF 저장 시 흰 종이가 잠깐 보일 수 있습니다. 정상 작동 과정입니다.
       </p>
     </footer>
   </div>
@@ -434,6 +474,7 @@
     const pdfArea = document.getElementById("pdfArea");
     const pdfTitle = document.getElementById("pdfTitle");
     const pdfContent = document.getElementById("pdfContent");
+    const pdfNotice = document.getElementById("pdfNotice");
 
     const TITLE_KEY = "novelTitle";
     const CONTENT_KEY = "novelContent";
@@ -527,25 +568,24 @@
 
       applyStyle();
 
-      pdfArea.style.display = "block";
-      pdfArea.style.position = "fixed";
-      pdfArea.style.left = "-9999px";
-      pdfArea.style.top = "0";
-      pdfArea.style.width = "794px";
-      pdfArea.style.minHeight = "1123px";
-      pdfArea.style.padding = "72px 64px";
-      pdfArea.style.background = "#ffffff";
-      pdfArea.style.color = "#000000";
+      pdfArea.classList.add("pdf-active");
     }
 
     function hidePdfArea() {
-      pdfArea.style.display = "none";
-      pdfArea.style.position = "";
-      pdfArea.style.left = "";
-      pdfArea.style.top = "";
+      pdfArea.classList.remove("pdf-active");
+      pdfNotice.classList.remove("active");
+      pdfButton.disabled = false;
     }
 
-    function savePdf() {
+    function waitFrame() {
+      return new Promise(function (resolve) {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(resolve);
+        });
+      });
+    }
+
+    async function savePdf() {
       updateEverything();
 
       if (typeof html2pdf === "undefined") {
@@ -553,9 +593,19 @@
         return;
       }
 
+      pdfButton.disabled = true;
       saveStatus.textContent = "PDF 만드는 중...";
+      pdfNotice.classList.add("active");
 
       preparePdfArea();
+
+      /*
+        중요:
+        PDF용 종이를 화면에 띄운 뒤,
+        브라우저가 실제로 그릴 시간을 아주 짧게 기다립니다.
+        이걸 안 하면 빈 PDF가 생길 수 있습니다.
+      */
+      await waitFrame();
 
       const title = titleInput.value.trim() || "제목 없는 소설";
       const fileName = makeSafeFileName(title) + ".pdf";
@@ -570,7 +620,9 @@
         html2canvas: {
           scale: 2,
           backgroundColor: "#ffffff",
-          useCORS: true
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0
         },
         jsPDF: {
           unit: "px",
@@ -579,20 +631,20 @@
         }
       };
 
-      html2pdf()
-        .set(options)
-        .from(pdfArea)
-        .save()
-        .then(function () {
-          hidePdfArea();
-          saveStatus.textContent = "PDF 저장 완료";
-        })
-        .catch(function (error) {
-          console.error(error);
-          hidePdfArea();
-          saveStatus.textContent = "PDF 저장 실패";
-          alert("PDF 저장에 실패했어요.");
-        });
+      try {
+        await html2pdf()
+          .set(options)
+          .from(pdfArea)
+          .save();
+
+        saveStatus.textContent = "PDF 저장 완료";
+      } catch (error) {
+        console.error(error);
+        saveStatus.textContent = "PDF 저장 실패";
+        alert("PDF 저장에 실패했어요.");
+      } finally {
+        hidePdfArea();
+      }
     }
 
     function clearAll() {
