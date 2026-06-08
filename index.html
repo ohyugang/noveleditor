@@ -18,82 +18,104 @@
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        글꼴 크기와 줄간격을 조절하고, PDF로 저장할 수 있는 원고 작업실입니다.
+        글을 쓰면서 바로 미리보고, PDF로 저장할 수 있는 원고 작업실입니다.
       </p>
     </header>
 
-    <!-- 편집기 전체 카드 -->
-    <section class="editor-card">
-      <!-- 설정 영역 -->
-      <div class="control-panel">
-        <div class="control-group">
-          <label for="fontSizeInput">글꼴 크기</label>
-          <select id="fontSizeInput">
-            <option value="14">14px</option>
-            <option value="15">15px</option>
-            <option value="16">16px</option>
-            <option value="17" selected>17px</option>
-            <option value="18">18px</option>
-            <option value="19">19px</option>
-            <option value="20">20px</option>
-            <option value="22">22px</option>
-            <option value="24">24px</option>
-          </select>
+    <!-- 편집기와 미리보기를 나란히 감싸는 영역 -->
+    <main class="workspace">
+      <!-- 왼쪽: 편집기 -->
+      <section class="editor-card">
+        <!-- 설정 영역 -->
+        <div class="control-panel">
+          <div class="control-group">
+            <label for="fontSizeInput">글꼴 크기</label>
+            <select id="fontSizeInput">
+              <option value="14">14px</option>
+              <option value="15">15px</option>
+              <option value="16">16px</option>
+              <option value="17" selected>17px</option>
+              <option value="18">18px</option>
+              <option value="19">19px</option>
+              <option value="20">20px</option>
+              <option value="22">22px</option>
+              <option value="24">24px</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="lineHeightInput">줄간격</label>
+            <select id="lineHeightInput">
+              <option value="1.4">1.4</option>
+              <option value="1.5">1.5</option>
+              <option value="1.6">1.6</option>
+              <option value="1.7">1.7</option>
+              <option value="1.8" selected>1.8</option>
+              <option value="1.9">1.9</option>
+              <option value="2">2.0</option>
+            </select>
+          </div>
         </div>
 
-        <div class="control-group">
-          <label for="lineHeightInput">줄간격</label>
-          <select id="lineHeightInput">
-            <option value="1.4">1.4</option>
-            <option value="1.5">1.5</option>
-            <option value="1.6">1.6</option>
-            <option value="1.7">1.7</option>
-            <option value="1.8" selected>1.8</option>
-            <option value="1.9">1.9</option>
-            <option value="2">2.0</option>
-          </select>
-        </div>
-      </div>
+        <!-- 제목 입력 영역 -->
+        <label for="titleInput">소설 제목</label>
+        <input 
+          type="text" 
+          id="titleInput" 
+          placeholder="제목을 입력하세요" 
+        />
 
-      <!-- 제목 입력 영역 -->
-      <label for="titleInput">소설 제목</label>
-      <input 
-        type="text" 
-        id="titleInput" 
-        placeholder="제목을 입력하세요" 
-      />
+        <!-- 본문 입력 영역 -->
+        <label for="contentInput">본문</label>
+        <textarea 
+          id="contentInput" 
+          placeholder="여기에 소설을 작성하세요..."
+        ></textarea>
 
-      <!-- 본문 입력 영역 -->
-      <label for="contentInput">본문</label>
-      <textarea 
-        id="contentInput" 
-        placeholder="여기에 소설을 작성하세요..."
-      ></textarea>
+        <!-- 글자 수와 저장 상태 표시 -->
+        <div class="status-row">
+          <div>
+            <span>공백 포함 글자 수: </span>
+            <strong id="charCount">0</strong>
+          </div>
 
-      <!-- 글자 수와 저장 상태 표시 -->
-      <div class="status-row">
-        <div>
-          <span>공백 포함 글자 수: </span>
-          <strong id="charCount">0</strong>
+          <div>
+            <span>공백 제외 글자 수: </span>
+            <strong id="charCountNoSpace">0</strong>
+          </div>
+
+          <p id="saveStatus">아직 저장되지 않았습니다.</p>
         </div>
 
-        <div>
-          <span>공백 제외 글자 수: </span>
-          <strong id="charCountNoSpace">0</strong>
+        <!-- 버튼 영역 -->
+        <div class="button-row">
+          <button id="loadButton">저장된 글 불러오기</button>
+          <button id="pdfButton">PDF로 저장</button>
+          <button id="clearButton" class="danger">전체 삭제</button>
+        </div>
+      </section>
+
+      <!-- 오른쪽: 실시간 미리보기 -->
+      <aside class="preview-card">
+        <div class="preview-header">
+          <div>
+            <p class="preview-label">Preview</p>
+            <h2>미리보기</h2>
+          </div>
+          <span class="paper-badge">A4</span>
         </div>
 
-        <p id="saveStatus">아직 저장되지 않았습니다.</p>
-      </div>
+        <!-- 실제 종이처럼 보이는 영역 -->
+        <div class="paper-preview">
+          <h1 id="previewTitle">제목 없는 소설</h1>
+          <div id="previewContent" class="preview-content">
+            여기에 본문 미리보기가 표시됩니다.
+          </div>
+        </div>
+      </aside>
+    </main>
 
-      <!-- 버튼 영역 -->
-      <div class="button-row">
-        <button id="loadButton">저장된 글 불러오기</button>
-        <button id="pdfButton">PDF로 저장</button>
-        <button id="clearButton" class="danger">전체 삭제</button>
-      </div>
-    </section>
-
-    <!-- PDF 출력용 미리보기 영역 -->
+    <!-- PDF 출력용 영역 -->
     <!-- 화면에서는 숨겨져 있고, PDF 저장할 때만 인쇄됩니다 -->
     <section id="printArea" class="print-area">
       <h1 id="printTitle"></h1>
