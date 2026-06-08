@@ -49,7 +49,7 @@
 
     .workspace {
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
       gap: 24px;
       align-items: start;
     }
@@ -215,10 +215,12 @@
     }
 
     .paper-preview {
-      min-height: 720px;
-      max-height: 760px;
+      width: min(100%, 420px);
+      min-height: 595px;
+      max-height: 720px;
+      margin: 0 auto;
       overflow-y: auto;
-      padding: 42px 38px;
+      padding: 38px 32px;
       background: #f8f5ef;
       color: #1f2937;
       border-radius: 8px;
@@ -226,10 +228,10 @@
     }
 
     #previewTitle {
-      font-size: 24px;
+      font-size: 22px;
       line-height: 1.4;
       text-align: center;
-      margin: 0 0 32px;
+      margin: 0 0 30px;
       color: #111827;
     }
 
@@ -313,7 +315,7 @@
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        글을 쓰면 오른쪽 미리보기에 바로 반영되고, PDF는 텍스트로 직접 저장됩니다.
+        글을 쓰면 오른쪽 미리보기에 바로 반영되고, PDF는 A5 판형으로 저장됩니다.
       </p>
     </header>
 
@@ -376,7 +378,7 @@
 
         <div class="button-row">
           <button id="loadButton" type="button">저장된 글 불러오기</button>
-          <button id="pdfButton" type="button">PDF 바로 저장</button>
+          <button id="pdfButton" type="button">A5 PDF 저장</button>
           <button id="clearButton" type="button" class="danger">전체 삭제</button>
         </div>
       </section>
@@ -387,7 +389,7 @@
             <p class="preview-label">Preview</p>
             <h2>미리보기</h2>
           </div>
-          <span class="paper-badge">A4</span>
+          <span class="paper-badge">A5</span>
         </div>
 
         <div class="paper-preview">
@@ -398,7 +400,7 @@
     </main>
 
     <div id="pdfNotice" class="pdf-notice">
-      PDF를 만드는 중입니다...
+      A5 PDF를 만드는 중입니다...
     </div>
 
     <footer>
@@ -591,7 +593,7 @@
 
       pdfButton.disabled = true;
       pdfNotice.classList.add("active");
-      saveStatus.textContent = "PDF 만드는 중...";
+      saveStatus.textContent = "A5 PDF 만드는 중...";
 
       try {
         const { PDFDocument, rgb } = PDFLib;
@@ -602,13 +604,22 @@
         const fontBytes = await loadKoreanFont();
         const koreanFont = await pdfDoc.embedFont(fontBytes);
 
-        const pageWidth = 595.28;
-        const pageHeight = 841.89;
+        /*
+          A5 판형 크기입니다.
+          단위는 PDF에서 쓰는 point입니다.
+          A5 = 148mm x 210mm
+          약 419.53pt x 595.28pt
+        */
+        const pageWidth = 419.53;
+        const pageHeight = 595.28;
 
-        const marginTop = 70;
-        const marginBottom = 65;
-        const marginLeft = 65;
-        const marginRight = 65;
+        /*
+          A5는 A4보다 작으므로 여백도 작게 잡았습니다.
+        */
+        const marginTop = 45;
+        const marginBottom = 42;
+        const marginLeft = 42;
+        const marginRight = 42;
 
         const usableWidth = pageWidth - marginLeft - marginRight;
 
@@ -618,8 +629,8 @@
         const bodyFontSize = Number(normalizeFontSize(fontSizeInput.value));
         const bodyLineHeight = bodyFontSize * Number(lineHeightInput.value);
 
-        const titleFontSize = 20;
-        const titleLineHeight = 30;
+        const titleFontSize = 16;
+        const titleLineHeight = 24;
 
         let page = pdfDoc.addPage([pageWidth, pageHeight]);
         let y = pageHeight - marginTop;
@@ -633,7 +644,7 @@
           color: rgb(0, 0, 0)
         });
 
-        y -= titleLineHeight + 22;
+        y -= titleLineHeight + 18;
 
         const lines = splitTextByWidth(content, koreanFont, bodyFontSize, usableWidth);
 
@@ -666,7 +677,7 @@
 
         const link = document.createElement("a");
         link.href = url;
-        link.download = makeSafeFileName(title) + ".pdf";
+        link.download = makeSafeFileName(title) + "_A5.pdf";
 
         document.body.appendChild(link);
         link.click();
@@ -674,7 +685,7 @@
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        saveStatus.textContent = "PDF 저장 완료";
+        saveStatus.textContent = "A5 PDF 저장 완료";
       } catch (error) {
         console.error(error);
         saveStatus.textContent = "PDF 저장 실패";
