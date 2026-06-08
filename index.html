@@ -241,7 +241,7 @@
       color: #1f2937;
     }
 
-    .pdf-notice {
+    .save-notice {
       display: none;
       position: fixed;
       right: 24px;
@@ -255,7 +255,7 @@
       font-size: 14px;
     }
 
-    .pdf-notice.active {
+    .save-notice.active {
       display: block;
     }
 
@@ -315,7 +315,7 @@
       <p class="eyebrow">Novel Editor</p>
       <h1>웹 소설 편집기</h1>
       <p class="description">
-        글을 쓰면 오른쪽 미리보기에 바로 반영되고, PDF는 A5 판형으로 저장됩니다.
+        글을 쓰면 오른쪽 미리보기에 바로 반영되고, A5 PNG 이미지로 저장됩니다.
       </p>
     </header>
 
@@ -387,7 +387,7 @@
 
         <div class="button-row">
           <button id="loadButton" type="button">저장된 글 불러오기</button>
-          <button id="pdfButton" type="button">A5 PDF 저장</button>
+          <button id="pngButton" type="button">A5 PNG 저장</button>
           <button id="clearButton" type="button" class="danger">전체 삭제</button>
         </div>
       </section>
@@ -408,19 +408,16 @@
       </aside>
     </main>
 
-    <div id="pdfNotice" class="pdf-notice">
-      A5 PDF를 만드는 중입니다...
+    <div id="saveNotice" class="save-notice">
+      A5 PNG를 만드는 중입니다...
     </div>
 
     <footer>
       <p>
-        PDF 저장에는 외부 한글 폰트를 불러옵니다. 인터넷 연결이 필요합니다.
+        긴 글은 여러 장의 PNG 파일로 나뉘어 저장됩니다.
       </p>
     </footer>
   </div>
-
-  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 
   <script>
     const titleInput = document.getElementById("titleInput");
@@ -435,12 +432,12 @@
     const saveStatus = document.getElementById("saveStatus");
 
     const loadButton = document.getElementById("loadButton");
-    const pdfButton = document.getElementById("pdfButton");
+    const pngButton = document.getElementById("pngButton");
     const clearButton = document.getElementById("clearButton");
 
     const previewTitle = document.getElementById("previewTitle");
     const previewContent = document.getElementById("previewContent");
-    const pdfNotice = document.getElementById("pdfNotice");
+    const saveNotice = document.getElementById("saveNotice");
 
     const TITLE_KEY = "novelTitle";
     const CONTENT_KEY = "novelContent";
@@ -450,8 +447,6 @@
 
     const ALLOWED_FONT_SIZES = ["9", "10", "11", "12", "13", "14", "15"];
     const ALLOWED_MARGINS = ["narrow", "normal", "wide"];
-
-    const FONT_URL = "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf";
 
     function updateCharCount() {
       const content = contentInput.value;
@@ -491,14 +486,15 @@
       previewContent.style.fontSize = fontSizePx + "px";
       previewContent.style.lineHeight = lineHeight;
 
+      const paperPreview = document.querySelector(".paper-preview");
       const marginType = normalizeMargin(marginInput.value);
 
       if (marginType === "narrow") {
-        document.querySelector(".paper-preview").style.padding = "30px 24px";
+        paperPreview.style.padding = "30px 24px";
       } else if (marginType === "wide") {
-        document.querySelector(".paper-preview").style.padding = "48px 42px";
+        paperPreview.style.padding = "48px 42px";
       } else {
-        document.querySelector(".paper-preview").style.padding = "38px 32px";
+        paperPreview.style.padding = "38px 32px";
       }
     }
 
@@ -577,56 +573,40 @@
       return name.replace(/[\\/:*?"<>|]/g, "_");
     }
 
-    function getMarginSettings(marginType) {
+    function getCanvasMarginSettings(marginType) {
       const type = normalizeMargin(marginType);
 
       if (type === "narrow") {
         return {
-          top: 34,
-          bottom: 34,
-          left: 36,
-          right: 36,
-          maxCharsAdjust: 2
+          top: 130,
+          bottom: 120,
+          left: 130,
+          right: 130
         };
       }
 
       if (type === "wide") {
         return {
-          top: 58,
-          bottom: 54,
-          left: 58,
-          right: 58,
-          maxCharsAdjust: -2
+          top: 210,
+          bottom: 190,
+          left: 190,
+          right: 190
         };
       }
 
       return {
-        top: 46,
-        bottom: 44,
-        left: 50,
-        right: 50,
-        maxCharsAdjust: 0
+        top: 170,
+        bottom: 155,
+        left: 160,
+        right: 160
       };
     }
 
-    function getMaxCharsPerLine(fontSize, marginType) {
-      const size = Number(fontSize);
-      const margin = getMarginSettings(marginType);
-
-      let baseCount;
-
-      if (size <= 9) baseCount = 21;
-      else if (size <= 10) baseCount = 20;
-      else if (size <= 11) baseCount = 18;
-      else if (size <= 12) baseCount = 17;
-      else if (size <= 13) baseCount = 16;
-      else if (size <= 14) baseCount = 15;
-      else baseCount = 14;
-
-      return Math.max(8, baseCount + margin.maxCharsAdjust);
+    function getCanvasFontSize(ptSize) {
+      return Number(ptSize) * 4;
     }
 
-    function splitTextByCharacterCount(text, maxCharsPerLine) {
+    function wrapTextByCanvas(ctx, text, maxWidth) {
       const lines = [];
       const paragraphs = text.replace(/\r/g, "").split("\n");
 
@@ -639,11 +619,14 @@
         let currentLine = "";
 
         for (const char of paragraph) {
-          currentLine += char;
+          const testLine = currentLine + char;
+          const width = ctx.measureText(testLine).width;
 
-          if (currentLine.length >= maxCharsPerLine) {
+          if (width > maxWidth && currentLine !== "") {
             lines.push(currentLine);
-            currentLine = "";
+            currentLine = char;
+          } else {
+            currentLine = testLine;
           }
         }
 
@@ -655,136 +638,139 @@
       return lines;
     }
 
-    async function loadKoreanFont() {
-      const response = await fetch(FONT_URL);
-
-      if (!response.ok) {
-        throw new Error("폰트 파일을 불러오지 못했습니다.");
-      }
-
-      return await response.arrayBuffer();
+    function drawPageBase(ctx, canvas) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    async function savePdf() {
+    function downloadCanvasAsPng(canvas, fileName) {
+      const link = document.createElement("a");
+      link.download = fileName;
+      link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function createCanvasPage() {
+      const canvas = document.createElement("canvas");
+
+      /*
+        A5 비율입니다.
+        148mm x 210mm 비율을 고해상도 PNG로 저장합니다.
+      */
+      canvas.width = 1240;
+      canvas.height = 1748;
+
+      return canvas;
+    }
+
+    async function savePng() {
       updateEverything();
 
-      if (!window.PDFLib) {
-        alert("PDF 기능을 불러오지 못했어요. 인터넷 연결을 확인해주세요.");
-        return;
-      }
-
-      if (typeof fontkit === "undefined") {
-        alert("한글 폰트 기능을 불러오지 못했어요. 인터넷 연결을 확인해주세요.");
-        return;
-      }
-
-      pdfButton.disabled = true;
-      pdfNotice.classList.add("active");
-      saveStatus.textContent = "A5 PDF 만드는 중...";
+      pngButton.disabled = true;
+      saveNotice.classList.add("active");
+      saveStatus.textContent = "A5 PNG 만드는 중...";
 
       try {
-        const { PDFDocument, rgb } = PDFLib;
-
-        const pdfDoc = await PDFDocument.create();
-        pdfDoc.registerFontkit(fontkit);
-
-        const fontBytes = await loadKoreanFont();
-        const koreanFont = await pdfDoc.embedFont(fontBytes);
-
-        const pageWidth = 419.53;
-        const pageHeight = 595.28;
-
-        const marginSettings = getMarginSettings(marginInput.value);
-
-        const marginTop = marginSettings.top;
-        const marginBottom = marginSettings.bottom;
-        const marginLeft = marginSettings.left;
-
         const title = titleInput.value.trim() || "제목 없는 소설";
         const content = contentInput.value || "";
 
-        const bodyFontSize = Number(normalizeFontSize(fontSizeInput.value));
-        const bodyLineHeight = bodyFontSize * Number(lineHeightInput.value);
+        const safeTitle = makeSafeFileName(title);
 
-        const titleFontSize = 15;
-        const titleLineHeight = 22;
+        const margin = getCanvasMarginSettings(marginInput.value);
 
-        const maxCharsPerLine = getMaxCharsPerLine(bodyFontSize, marginInput.value);
-        const maxTitleCharsPerLine = 13;
+        const pageWidth = 1240;
+        const pageHeight = 1748;
 
-        let page = pdfDoc.addPage([pageWidth, pageHeight]);
-        let y = pageHeight - marginTop;
+        const bodyFontPx = getCanvasFontSize(normalizeFontSize(fontSizeInput.value));
+        const bodyLineHeight = bodyFontPx * Number(lineHeightInput.value);
 
-        const titleLines = splitTextByCharacterCount(title, maxTitleCharsPerLine);
+        const titleFontPx = 56;
+        const titleLineHeight = 78;
+
+        const usableWidth = pageWidth - margin.left - margin.right;
+        const usableHeight = pageHeight - margin.top - margin.bottom;
+
+        /*
+          줄바꿈 계산용 임시 캔버스입니다.
+        */
+        const measureCanvas = document.createElement("canvas");
+        const measureCtx = measureCanvas.getContext("2d");
+
+        measureCtx.font = `${bodyFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+
+        const bodyLines = wrapTextByCanvas(measureCtx, content, usableWidth);
+
+        measureCtx.font = `700 ${titleFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+        const titleLines = wrapTextByCanvas(measureCtx, title, usableWidth);
+
+        let pageIndex = 1;
+        let canvas = createCanvasPage();
+        let ctx = canvas.getContext("2d");
+
+        drawPageBase(ctx, canvas);
+
+        let y = margin.top;
+
+        ctx.fillStyle = "#111111";
+        ctx.textBaseline = "top";
+        ctx.font = `700 ${titleFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
 
         for (const titleLine of titleLines) {
-          if (y < marginBottom) {
-            page = pdfDoc.addPage([pageWidth, pageHeight]);
-            y = pageHeight - marginTop;
-          }
+          const titleWidth = ctx.measureText(titleLine).width;
+          const x = Math.max(margin.left, (pageWidth - titleWidth) / 2);
 
-          const titleWidth = koreanFont.widthOfTextAtSize(titleLine, titleFontSize);
-
-          page.drawText(titleLine, {
-            x: Math.max(marginLeft, (pageWidth - titleWidth) / 2),
-            y: y,
-            size: titleFontSize,
-            font: koreanFont,
-            color: rgb(0, 0, 0)
-          });
-
-          y -= titleLineHeight;
+          ctx.fillText(titleLine, x, y);
+          y += titleLineHeight;
         }
 
-        y -= 14;
+        y += 40;
 
-        const lines = splitTextByCharacterCount(content, maxCharsPerLine);
+        ctx.font = `${bodyFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+        ctx.fillStyle = "#111111";
 
-        for (const line of lines) {
-          if (y < marginBottom) {
-            page = pdfDoc.addPage([pageWidth, pageHeight]);
-            y = pageHeight - marginTop;
+        for (const line of bodyLines) {
+          if (y + bodyLineHeight > pageHeight - margin.bottom) {
+            downloadCanvasAsPng(
+              canvas,
+              `${safeTitle}_A5_${String(pageIndex).padStart(2, "0")}.png`
+            );
+
+            pageIndex += 1;
+
+            canvas = createCanvasPage();
+            ctx = canvas.getContext("2d");
+
+            drawPageBase(ctx, canvas);
+
+            y = margin.top;
+
+            ctx.textBaseline = "top";
+            ctx.font = `${bodyFontPx}px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+            ctx.fillStyle = "#111111";
           }
 
           if (line.trim() !== "") {
-            page.drawText(line, {
-              x: marginLeft,
-              y: y,
-              size: bodyFontSize,
-              font: koreanFont,
-              color: rgb(0, 0, 0)
-            });
+            ctx.fillText(line, margin.left, y);
           }
 
-          y -= bodyLineHeight;
+          y += bodyLineHeight;
         }
 
-        const pdfBytes = await pdfDoc.save();
+        downloadCanvasAsPng(
+          canvas,
+          `${safeTitle}_A5_${String(pageIndex).padStart(2, "0")}.png`
+        );
 
-        const blob = new Blob([pdfBytes], {
-          type: "application/pdf"
-        });
-
-        const url = URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = makeSafeFileName(title) + "_A5.pdf";
-
-        document.body.appendChild(link);
-        link.click();
-
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        saveStatus.textContent = "A5 PDF 저장 완료";
+        saveStatus.textContent = `A5 PNG 저장 완료: ${pageIndex}장`;
       } catch (error) {
         console.error(error);
-        saveStatus.textContent = "PDF 저장 실패";
-        alert("PDF 저장에 실패했어요. 콘솔을 확인해주세요.");
+        saveStatus.textContent = "PNG 저장 실패";
+        alert("PNG 저장에 실패했어요. 콘솔을 확인해주세요.");
       } finally {
-        pdfNotice.classList.remove("active");
-        pdfButton.disabled = false;
+        saveNotice.classList.remove("active");
+        pngButton.disabled = false;
       }
     }
 
@@ -836,7 +822,7 @@
     marginInput.addEventListener("change", updateEverything);
 
     loadButton.addEventListener("click", loadNovel);
-    pdfButton.addEventListener("click", savePdf);
+    pngButton.addEventListener("click", savePng);
     clearButton.addEventListener("click", clearAll);
 
     loadNovel();
