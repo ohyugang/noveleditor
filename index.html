@@ -347,6 +347,15 @@
               <option value="2">2.0</option>
             </select>
           </div>
+
+          <div class="control-group">
+            <label for="marginInput">여백</label>
+            <select id="marginInput">
+              <option value="narrow">좁게</option>
+              <option value="normal" selected>보통</option>
+              <option value="wide">넓게</option>
+            </select>
+          </div>
         </div>
 
         <label for="titleInput">소설 제목</label>
@@ -419,6 +428,7 @@
 
     const fontSizeInput = document.getElementById("fontSizeInput");
     const lineHeightInput = document.getElementById("lineHeightInput");
+    const marginInput = document.getElementById("marginInput");
 
     const charCount = document.getElementById("charCount");
     const charCountNoSpace = document.getElementById("charCountNoSpace");
@@ -436,8 +446,10 @@
     const CONTENT_KEY = "novelContent";
     const FONT_SIZE_KEY = "novelFontSize";
     const LINE_HEIGHT_KEY = "novelLineHeight";
+    const MARGIN_KEY = "novelMargin";
 
     const ALLOWED_FONT_SIZES = ["9", "10", "11", "12", "13", "14", "15"];
+    const ALLOWED_MARGINS = ["narrow", "normal", "wide"];
 
     const FONT_URL = "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf";
 
@@ -455,6 +467,14 @@
       return "12";
     }
 
+    function normalizeMargin(value) {
+      if (ALLOWED_MARGINS.includes(value)) {
+        return value;
+      }
+
+      return "normal";
+    }
+
     function applyStyle() {
       const normalizedFontSize = normalizeFontSize(fontSizeInput.value);
 
@@ -470,6 +490,16 @@
 
       previewContent.style.fontSize = fontSizePx + "px";
       previewContent.style.lineHeight = lineHeight;
+
+      const marginType = normalizeMargin(marginInput.value);
+
+      if (marginType === "narrow") {
+        document.querySelector(".paper-preview").style.padding = "30px 24px";
+      } else if (marginType === "wide") {
+        document.querySelector(".paper-preview").style.padding = "48px 42px";
+      } else {
+        document.querySelector(".paper-preview").style.padding = "38px 32px";
+      }
     }
 
     function updatePreview() {
@@ -484,11 +514,13 @@
 
     function saveNow() {
       const normalizedFontSize = normalizeFontSize(fontSizeInput.value);
+      const normalizedMargin = normalizeMargin(marginInput.value);
 
       localStorage.setItem(TITLE_KEY, titleInput.value);
       localStorage.setItem(CONTENT_KEY, contentInput.value);
       localStorage.setItem(FONT_SIZE_KEY, normalizedFontSize);
       localStorage.setItem(LINE_HEIGHT_KEY, lineHeightInput.value);
+      localStorage.setItem(MARGIN_KEY, normalizedMargin);
 
       saveStatus.textContent = "저장됨";
     }
@@ -504,6 +536,7 @@
       const savedContent = localStorage.getItem(CONTENT_KEY);
       const savedFontSize = localStorage.getItem(FONT_SIZE_KEY);
       const savedLineHeight = localStorage.getItem(LINE_HEIGHT_KEY);
+      const savedMargin = localStorage.getItem(MARGIN_KEY);
 
       if (savedTitle !== null) {
         titleInput.value = savedTitle;
@@ -525,6 +558,14 @@
         lineHeightInput.value = savedLineHeight;
       }
 
+      if (savedMargin !== null) {
+        const normalizedMargin = normalizeMargin(savedMargin);
+        marginInput.value = normalizedMargin;
+        localStorage.setItem(MARGIN_KEY, normalizedMargin);
+      } else {
+        marginInput.value = "normal";
+      }
+
       updateCharCount();
       updatePreview();
       applyStyle();
@@ -536,17 +577,53 @@
       return name.replace(/[\\/:*?"<>|]/g, "_");
     }
 
-    function getMaxCharsPerLine(fontSize) {
+    function getMarginSettings(marginType) {
+      const type = normalizeMargin(marginType);
+
+      if (type === "narrow") {
+        return {
+          top: 34,
+          bottom: 34,
+          left: 36,
+          right: 36,
+          maxCharsAdjust: 2
+        };
+      }
+
+      if (type === "wide") {
+        return {
+          top: 58,
+          bottom: 54,
+          left: 58,
+          right: 58,
+          maxCharsAdjust: -2
+        };
+      }
+
+      return {
+        top: 46,
+        bottom: 44,
+        left: 50,
+        right: 50,
+        maxCharsAdjust: 0
+      };
+    }
+
+    function getMaxCharsPerLine(fontSize, marginType) {
       const size = Number(fontSize);
+      const margin = getMarginSettings(marginType);
 
-      if (size <= 9) return 21;
-      if (size <= 10) return 20;
-      if (size <= 11) return 18;
-      if (size <= 12) return 17;
-      if (size <= 13) return 16;
-      if (size <= 14) return 15;
+      let baseCount;
 
-      return 14;
+      if (size <= 9) baseCount = 21;
+      else if (size <= 10) baseCount = 20;
+      else if (size <= 11) baseCount = 18;
+      else if (size <= 12) baseCount = 17;
+      else if (size <= 13) baseCount = 16;
+      else if (size <= 14) baseCount = 15;
+      else baseCount = 14;
+
+      return Math.max(8, baseCount + margin.maxCharsAdjust);
     }
 
     function splitTextByCharacterCount(text, maxCharsPerLine) {
@@ -617,9 +694,11 @@
         const pageWidth = 419.53;
         const pageHeight = 595.28;
 
-        const marginTop = 46;
-        const marginBottom = 44;
-        const marginLeft = 50;
+        const marginSettings = getMarginSettings(marginInput.value);
+
+        const marginTop = marginSettings.top;
+        const marginBottom = marginSettings.bottom;
+        const marginLeft = marginSettings.left;
 
         const title = titleInput.value.trim() || "제목 없는 소설";
         const content = contentInput.value || "";
@@ -630,7 +709,7 @@
         const titleFontSize = 15;
         const titleLineHeight = 22;
 
-        const maxCharsPerLine = getMaxCharsPerLine(bodyFontSize);
+        const maxCharsPerLine = getMaxCharsPerLine(bodyFontSize, marginInput.value);
         const maxTitleCharsPerLine = 13;
 
         let page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -720,11 +799,13 @@
       contentInput.value = "";
       fontSizeInput.value = "12";
       lineHeightInput.value = "1.8";
+      marginInput.value = "normal";
 
       localStorage.removeItem(TITLE_KEY);
       localStorage.removeItem(CONTENT_KEY);
       localStorage.removeItem(FONT_SIZE_KEY);
       localStorage.removeItem(LINE_HEIGHT_KEY);
+      localStorage.removeItem(MARGIN_KEY);
 
       updateCharCount();
       updatePreview();
@@ -752,6 +833,7 @@
 
     fontSizeInput.addEventListener("change", updateEverything);
     lineHeightInput.addEventListener("change", updateEverything);
+    marginInput.addEventListener("change", updateEverything);
 
     loadButton.addEventListener("click", loadNovel);
     pdfButton.addEventListener("click", savePdf);
